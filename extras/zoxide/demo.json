@@ -1,0 +1,14 @@
+{
+  "name": "zoxide",
+  "summary": "Find the checkout directory from visit history",
+  "replay": false,
+  "core": "sysinit.wezterm",
+  "nix": "github:roshbhatia/sysinit.wezterm#provider-zoxide",
+  "brew": "sysinit-wezterm-provider-zoxide",
+  "binary": "zoxide-picker",
+  "dependencies": [
+    "python@3.13",
+    "zoxide"
+  ],
+  "manifest_path": "share/wezterm/providers/zoxide.json"
+}

@@ -1,0 +1,20 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: DeterminateSystems/nix-installer-action@v22
+      - run: nix flake check -L
+      - run: python3 hack/extra-docs.py --check
+      - name: Package adapters
+        run: python3 hack/release-scripts.py --version "${GITHUB_REF_NAME#v}" --all
+      - name: Publish archives
+        run: gh release create "$GITHUB_REF_NAME" dist/* --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}

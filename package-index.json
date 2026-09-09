@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "providers": [
+    {
+      "name": "zoxide",
+      "summary": "Find the checkout directory from visit history",
+      "replay": false,
+      "core": "sysinit.wezterm",
+      "nix": "github:roshbhatia/sysinit.wezterm#provider-zoxide",
+      "brew": "sysinit-wezterm-provider-zoxide",
+      "binary": "zoxide-picker",
+      "dependencies": [
+        "python@3.13",
+        "zoxide"
+      ],
+      "manifest_path": "share/wezterm/providers/zoxide.json"
+    }
+  ],
+  "packages": [
+    {
+      "name": "sysinit-wezterm-provider-zoxide",
+      "kind": "provider",
+      "binary": "zoxide-picker",
+      "description": "Find the checkout directory from visit history",
+      "archive": "sysinit.wezterm_provider_zoxide_%{version}_%{os}_%{arch}.tar.gz",
+      "share": [
+        "share/wezterm/providers/zoxide.json"
+      ],
+      "python_script": true,
+      "checksum": "sidecar",
+      "dependencies": [
+        "python@3.13",
+        "zoxide"
+      ]
+    }
+  ]
+}
