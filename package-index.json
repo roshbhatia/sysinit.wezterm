@@ -11,9 +11,11 @@
       "binary": "zoxide-picker",
       "dependencies": [
         "python@3.13",
+        "uv",
         "zoxide"
       ],
-      "manifest_path": "share/wezterm/providers/zoxide.json"
+      "manifest_path": "share/wezterm/providers/zoxide.json",
+      "status": "pending"
     }
   ],
   "packages": [
@@ -30,6 +32,7 @@
       "checksum": "sidecar",
       "dependencies": [
         "python@3.13",
+        "uv",
         "zoxide"
       ]
     }

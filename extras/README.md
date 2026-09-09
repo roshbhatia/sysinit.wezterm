@@ -4,6 +4,6 @@
 
 | Extra | Task | Demo |
 |---|---|---|
-| [zoxide](zoxide/README.md) | Find the checkout directory from visit history | [Tape](zoxide/demo.tape) |
+| [zoxide](zoxide/README.md) | Find the checkout directory from visit history | Pending |
 
 <!-- END GENERATED CATALOG -->

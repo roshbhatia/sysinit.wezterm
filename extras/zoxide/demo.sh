@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
-cd "$root"
-exec python3 hack/demo-extra.py zoxide
+printf 'Live picker recording pending; the direct-adapter preview was withdrawn.\n' >&2
+exit 1
