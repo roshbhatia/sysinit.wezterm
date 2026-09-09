@@ -5,6 +5,7 @@ ICON = 'md_folder'
 import json
 import os
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 
@@ -38,6 +39,9 @@ def main():
             raise ValueError("expected a provider/v1 request")
         capability = request["capability"]
         if capability == "provider.validate":
+            if not shutil.which(CORE):
+                raise FileNotFoundError("core executable is unavailable: " + CORE)
+            subprocess.run([CORE, "--help"], text=True, capture_output=True, timeout=4, check=True)
             output = {"ok": True}
         elif capability == "picker.describe":
             output = {"title": TITLE, "icon": ICON}

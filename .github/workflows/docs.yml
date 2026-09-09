@@ -12,3 +12,4 @@ jobs:
       - run: python3 hack/extra-demos.py --check
       - run: python3 hack/test_update_flakes.py
       - run: python3 -m py_compile hack/release-scripts.py
+      - run: python3 hack/test_picker_validation.py
