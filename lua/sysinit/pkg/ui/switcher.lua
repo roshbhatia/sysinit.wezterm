@@ -236,7 +236,6 @@ function M.setup(config, wm, ctx)
   end
 
   local open_session_tree
-  local tree_pending_actions = {}
 
   local function tree_window_id(win)
     local ok, id = pcall(function()
@@ -246,7 +245,7 @@ function M.setup(config, wm, ctx)
   end
 
   local function finish_session_tree_action(win, pane, action, key)
-    tree_pending_actions[tree_window_id(win)] = action or false
+    wezterm.GLOBAL["session_tree_action:" .. tree_window_id(win)] = action or false
     win:perform_action(wezterm.action.PopKeyTable, pane)
     win:perform_action(wezterm.action.SendKey({ key = key or "Enter" }), pane)
   end
@@ -342,8 +341,8 @@ function M.setup(config, wm, ctx)
     options.title = title
     options.action = wezterm.action_callback(function(inner_win, inner_pane, id, _label)
       local window_id = tree_window_id(inner_win)
-      local pending = tree_pending_actions[window_id]
-      tree_pending_actions[window_id] = nil
+      local pending = wezterm.GLOBAL["session_tree_action:" .. window_id]
+      wezterm.GLOBAL["session_tree_action:" .. window_id] = nil
       pcall(function()
         if inner_win:active_key_table() == "sysinit_session_tree" then
           inner_win:perform_action(wezterm.action.PopKeyTable, inner_pane)
@@ -369,7 +368,7 @@ function M.setup(config, wm, ctx)
       end
       session_tree_dispatch(inner_win, inner_pane, id, by_id)
     end)
-    tree_pending_actions[tree_window_id(win)] = nil
+    wezterm.GLOBAL["session_tree_action:" .. tree_window_id(win)] = nil
     win:perform_action(wezterm.action.ActivateKeyTable({ name = "sysinit_session_tree", one_shot = false }), pane)
     win:perform_action(wezterm.action.InputSelector(options), pane)
   end

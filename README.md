@@ -26,9 +26,9 @@ in {
   programs.sysinit-wezterm = {
     enable = true;
     settings.picker.providers = [
-      { key = "!"; name = "hosts"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
-      { key = "@"; name = "sessions"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
-      { key = "#"; name = "folders"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
+      { key = "!"; name = "tether"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
+      { key = "@"; name = "seshy"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
+      { key = "#"; name = "zoxide"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
     ];
   };
 }

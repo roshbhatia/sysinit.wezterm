@@ -334,6 +334,54 @@ session_keys["/"].action(tree_window, pane)
 assert(#tree_actions == 2, "slash did not leave the session action table")
 assert(tree_actions[2].SendKey.key == "/", "slash did not enter the native filter")
 
+local original_rows = package.loaded["sysinit.pkg.ui.tree_rows"]
+package.loaded["sysinit.pkg.ui.tree_rows"] = {
+  new = function()
+    return function()
+      return { { id = "ws:default", label = "default" } }
+    end
+  end,
+}
+local launcher_module = require("sysinit.pkg.ui.launcher")
+local original_open = launcher_module.open
+local launched
+launcher_module.open = function(_, _, key)
+  launched = key
+end
+local context = {
+  tree = function()
+    return {}
+  end,
+  colors = function()
+    return {}
+  end,
+  icons = {},
+  home = "/home/test",
+}
+local first_config, second_config = {}, {}
+switcher.setup(first_config, { apply_to_config = function() end }, context)
+switcher.setup(second_config, { apply_to_config = function() end }, context)
+for _, shortcut in ipairs({ "!", "@", "#" }) do
+  tree_actions = {}
+  for _, binding in ipairs(first_config.keys) do
+    if binding.key == "s" and binding.mods == "SUPER" then
+      binding.action(tree_window, pane)
+    end
+  end
+  local selection = tree_actions[#tree_actions].InputSelector
+  assert(selection, "the session tree did not open")
+  for _, binding in ipairs(second_config.key_tables.sysinit_session_tree) do
+    if binding.key == shortcut then
+      binding.action(tree_window, pane)
+    end
+  end
+  selection.action(tree_window, pane, "ws:default", "default")
+  assert(launched == shortcut, "a provider action was lost across configuration instances")
+  assert(wezterm.GLOBAL["session_tree_action:7"] == nil, "a completed provider action remained pending")
+end
+launcher_module.open = original_open
+package.loaded["sysinit.pkg.ui.tree_rows"] = original_rows
+
 local refreshed
 local switch_actions = {}
 local function last_switch()
