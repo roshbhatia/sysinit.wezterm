@@ -20,6 +20,21 @@
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
+          wezspawn = pkgs.buildGoModule {
+            pname = "wezspawn";
+            version = "0.1.0";
+            src = pkgs.lib.fileset.toSource {
+              root = ./.;
+              fileset = pkgs.lib.fileset.unions [
+                ./go.mod
+                ./cmd
+                ./internal
+              ];
+            };
+            vendorHash = null;
+            subPackages = [ "cmd/wezspawn" ];
+            meta.mainProgram = "wezspawn";
+          };
           provider-zoxide = import ./extras/zoxide {
             inherit pkgs;
             core = pkgs.zoxide;
@@ -30,6 +45,7 @@
             paths = [
               self.packages.${system}.default
               self.packages.${system}.extras
+              self.packages.${system}.wezspawn
             ];
           };
           default = pkgs.runCommand "sysinit-wezterm" { } "mkdir -p $out; cp -r ${./lua} $out/lua";
@@ -91,6 +107,7 @@
             }).config.content;
         in
         {
+          wezspawn = self.packages.${system}.wezspawn;
           startup =
             pkgs.runCommand "wezterm-standalone-startup"
               {

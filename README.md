@@ -38,6 +38,13 @@ The host module supplies flake inputs through Home Manager's `extraSpecialArgs`.
 Each registered shortcut also appears in the command palette.
 Provider icons and row fields come from the provider response.
 
+## Window launcher
+
+`wezspawn` opens a window in the focused workspace and directory. With no attached
+GUI, it starts WezTerm. Install it separately with
+`nix profile install github:roshbhatia/sysinit.wezterm#wezspawn`, or use the `full` package.
+Run `wezspawn --help` for executable and application-path options.
+
 ## Providers
 
 A provider manifest declares an executable argument list and these actions:
