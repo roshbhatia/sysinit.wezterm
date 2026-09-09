@@ -67,6 +67,7 @@
               pkgs.stylua
               pkgs.nixfmt
               pkgs.python3
+              pkgs.uv
               pkgs.wezterm
               pkgs.vhs
             ];

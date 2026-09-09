@@ -8,8 +8,10 @@ let
   cfg = config.programs.sysinit-wezterm;
   runner = pkgs.writeShellApplication {
     name = "wezterm-picker-call";
-    runtimeInputs = [ pkgs.python3 ];
-    text = ''exec python3 ${./scripts/picker-call.py} "$@"'';
+    text = ''
+      exec ${pkgs.uv}/bin/uv --no-cache run --offline --no-managed-python --no-python-downloads \
+        --no-project --python ${pkgs.python3}/bin/python3 --script ${./scripts/picker-call.py} "$@"
+    '';
   };
 in
 {

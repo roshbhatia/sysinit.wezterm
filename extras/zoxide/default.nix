@@ -2,8 +2,10 @@
 let
   executable = pkgs.writeShellApplication {
     name = "zoxide-picker";
-    runtimeInputs = [ pkgs.python3 ];
-    text = "exec python3 ${./provider.py} ${pkgs.lib.getExe core}";
+    text = ''
+      exec ${pkgs.uv}/bin/uv --no-cache run --offline --no-managed-python --no-python-downloads \
+        --no-project --python ${pkgs.python3}/bin/python3 --script ${./provider.py} ${pkgs.lib.getExe core}
+    '';
   };
   manifest = pkgs.writeText "zoxide.json" (
     builtins.toJSON (
