@@ -55,9 +55,6 @@ local action = setmetatable({}, {
 })
 
 local wezterm = {
-  uuid_v4 = function()
-    return "11111111-2222-3333-4444-555555555555"
-  end,
   format = function(parts)
     local text = {}
     for _, part in ipairs(parts) do
@@ -467,6 +464,21 @@ picker.action(launch_window, pane, "review")
 local opened = performed[#performed].SwitchToWorkspace
 assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "local")
 assert(argv[3][4] == "review", "provider id did not stay one argument")
+local first_workspace = opened.name
+picker.action(launch_window, pane, "review")
+assert(performed[#performed].SwitchToWorkspace.name ~= first_workspace, "repeated launches reused a workspace")
+wezterm.GLOBAL.picker_workspace_sequence = 0
+mux_windows = { {
+  get_workspace = function()
+    return first_workspace
+  end,
+} }
+picker.action(launch_window, pane, "review")
+assert(
+  performed[#performed].SwitchToWorkspace.name ~= first_workspace,
+  "launch reused an existing workspace after reload"
+)
+mux_windows = {}
 child_process = function()
   return false, "", "directory disappeared"
 end
