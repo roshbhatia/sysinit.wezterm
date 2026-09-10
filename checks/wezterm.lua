@@ -465,19 +465,27 @@ local opened = performed[#performed].SwitchToWorkspace
 assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "local")
 assert(argv[3][4] == "review", "provider id did not stay one argument")
 local first_workspace = opened.name
+assert(first_workspace == "review", "provider workspace name contains a generated suffix")
 picker.action(launch_window, pane, "review")
-assert(performed[#performed].SwitchToWorkspace.name ~= first_workspace, "repeated launches reused a workspace")
-wezterm.GLOBAL.picker_workspace_sequence = 0
-mux_windows = { {
-  get_workspace = function()
-    return first_workspace
-  end,
-} }
+assert(performed[#performed].SwitchToWorkspace.name == first_workspace, "repeated launches changed workspace names")
+local focused = false
+mux_windows = {
+  {
+    get_workspace = function()
+      return first_workspace
+    end,
+    gui_window = function()
+      return {
+        focus = function()
+          focused = true
+        end,
+      }
+    end,
+  },
+}
+local before_reopen = #performed
 picker.action(launch_window, pane, "review")
-assert(
-  performed[#performed].SwitchToWorkspace.name ~= first_workspace,
-  "launch reused an existing workspace after reload"
-)
+assert(focused and #performed == before_reopen, "existing provider workspace was not focused")
 mux_windows = {}
 child_process = function()
   return false, "", "directory disappeared"

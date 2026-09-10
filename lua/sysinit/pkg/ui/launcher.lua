@@ -164,17 +164,7 @@ function M.open(win, pane, key)
           report(inner_win, spawn_error)
           return
         end
-        local occupied = {}
-        for _, window in ipairs(wezterm.mux.all_windows()) do
-          occupied[window:get_workspace()] = true
-        end
-        local sequence = wezterm.GLOBAL.picker_workspace_sequence or 0
-        local workspace
-        repeat
-          sequence = sequence + 1
-          workspace = tostring(plan.label or id) .. " [" .. sequence .. "]"
-        until not occupied[workspace]
-        wezterm.GLOBAL.picker_workspace_sequence = sequence
+        local workspace = tostring(plan.label or id)
         actions.switch_to_workspace(inner_win, inner_pane, workspace, spawn)
       end),
     }),
