@@ -2,6 +2,23 @@
   "version": 1,
   "providers": [
     {
+      "name": "zmx",
+      "summary": "Attach a persistent terminal session from the session picker",
+      "replay": false,
+      "core": "sysinit.wezterm",
+      "nix": "github:roshbhatia/sysinit.wezterm#provider-zmx",
+      "brew": "sysinit-wezterm-provider-zmx",
+      "binary": "zmx-picker",
+      "dependencies": [
+        "python@3.13",
+        "uv",
+        "neurosnap/tap/zmx"
+      ],
+      "manifest_path": "share/wezterm/providers/zmx.json",
+      "status": "pending",
+      "runtime_note": "Register this provider on `$`. It lists existing local Zmx sessions. Attach clears inherited ZMX_SESSION so it cannot switch another client."
+    },
+    {
       "name": "zoxide",
       "summary": "Find the checkout directory from visit history",
       "replay": false,
@@ -19,6 +36,23 @@
     }
   ],
   "packages": [
+    {
+      "name": "sysinit-wezterm-provider-zmx",
+      "kind": "provider",
+      "binary": "zmx-picker",
+      "description": "Attach a persistent terminal session from the session picker",
+      "archive": "sysinit.wezterm_provider_zmx_%{version}_%{os}_%{arch}.tar.gz",
+      "share": [
+        "share/wezterm/providers/zmx.json"
+      ],
+      "python_script": true,
+      "checksum": "sidecar",
+      "dependencies": [
+        "python@3.13",
+        "uv",
+        "neurosnap/tap/zmx"
+      ]
+    },
     {
       "name": "sysinit-wezterm-provider-zoxide",
       "kind": "provider",

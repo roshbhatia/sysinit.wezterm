@@ -13,4 +13,6 @@ Install the core utility separately, or select its all-provider bundle. Runtime 
 
 ## Demo
 
-Live recording pending. The previous recording bypassed the WezTerm picker and has been withdrawn.
+Live recording pending.
+
+[Tape source](demo.tape) · [Task script](demo.sh)

@@ -43,7 +43,7 @@ def main():
         if data.get("runtime_note"):
             text += data["runtime_note"] + "\n\n"
         if data.get("status") == "pending":
-            text += "## Demo\n\nLive recording pending. The previous recording bypassed the WezTerm picker and has been withdrawn.\n"
+            text += "## Demo\n\nLive recording pending.\n\n[Tape source](demo.tape) · [Task script](demo.sh)\n"
         else:
             text += "## Demo\n\n![" + data["summary"] + "](demo.gif)\n\n[Tape source](demo.tape) · [Task script](demo.sh)\n\n"
             text += "Run `nix develop -c bash extras/" + extra + "/demo.sh` to run the task without recording.\n"

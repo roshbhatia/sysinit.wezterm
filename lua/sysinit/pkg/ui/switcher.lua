@@ -57,7 +57,11 @@ function M.session_selector_options(choices, verb)
 end
 
 function M.session_tree_description()
-  return session_help("open", SESSION_TREE_ACTIONS)
+  local providers = {}
+  for _, provider in ipairs(launcher.providers()) do
+    providers[#providers + 1] = provider.key .. " " .. provider.name
+  end
+  return "  " .. table.concat(providers, "  ") .. "  |  j/k move  / filter  |  Enter open  x close  Esc quit"
 end
 
 ---@param opts table

@@ -55,15 +55,6 @@ local WINDOW_PREFIX = (function()
   return both
 end)()
 
-local READLINE_AND_SLK = (function()
-  local both = {}
-  for _, name in ipairs(READLINE) do
-    both[#both + 1] = name
-  end
-  both[#both + 1] = "slk"
-  return both
-end)()
-
 local TRACE_NAV = (function()
   local both = {}
   for _, name in ipairs(EDITORS) do
@@ -112,7 +103,16 @@ local function create_smart_keybind(key, mods, wezterm_action, opts)
         end
       end
 
-      win:perform_action(wezterm_action, pane)
+      local action = wezterm_action
+      if type(action) == "function" then
+        local err
+        action, err = action(pane)
+        if not action then
+          win:toast_notification("WezTerm", err, nil, 5000)
+          return
+        end
+      end
+      win:perform_action(action, pane)
     end),
   }
 end
@@ -128,20 +128,19 @@ local function create_multi_mod_bindings(key, action_fn, mod_list, opts)
   return bindings
 end
 
+local function host_action(kind, local_host)
+  return function(pane)
+    return require("sysinit.pkg.host_spawn").action(pane, kind, local_host)
+  end
+end
+
 local function get_pane_keys()
   local DIRECTION_KEYS = { h = "Left", j = "Down", k = "Up", l = "Right" }
   local keys = {
-    -- slk owns CTRL-s/v, so top-level splits remain on CTRL-SHIFT-s/v.
-    create_smart_keybind("s", "CTRL", act.SplitVertical({ domain = "CurrentPaneDomain" }), {
-      passthrough = APP_KEYS,
-    }),
-    create_smart_keybind("v", "CTRL", act.SplitHorizontal({ domain = "CurrentPaneDomain" }), {
-      passthrough = { "slk" },
-      passthrough_nvim = false,
-    }),
-
-    create_smart_keybind("s", "CTRL|SHIFT", act.SplitPane({ direction = "Down", top_level = true })),
-    create_smart_keybind("v", "CTRL|SHIFT", act.SplitPane({ direction = "Right", top_level = true })),
+    create_smart_keybind("s", "CTRL", host_action("Down", false)),
+    create_smart_keybind("v", "CTRL", host_action("Right", false)),
+    create_smart_keybind("s", "CTRL|SHIFT", host_action("Down", true)),
+    create_smart_keybind("v", "CTRL|SHIFT", host_action("Right", true)),
     -- CTRL-m is a carriage return, but nothing types it instead of Enter, and a
     -- passthrough would cost pane zoom inside an editor. Left bound on purpose.
     create_smart_keybind("m", "CTRL", act.TogglePaneZoomState),
@@ -299,18 +298,10 @@ local function get_tab_keys()
     create_smart_keybind("o", "CTRL|SHIFT", act.ActivateLastTab),
   }
 
-  -- CTRL-t is fzf's file widget and readline's transpose. SUPER-t spawns the
-  -- tab, so the chord loses nothing by passing through.
-  table.insert(
-    keys,
-    create_smart_keybind("t", "CTRL", act.SpawnTab("CurrentPaneDomain"), { passthrough = READLINE_AND_SLK })
-  )
-
-  table.insert(keys, create_smart_keybind("t", "SUPER", act.SpawnTab("CurrentPaneDomain")))
-
-  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", act.ShowTabNavigator))
-
-  table.insert(keys, create_smart_keybind("t", "SUPER|SHIFT", act.SpawnTab({ DomainName = "local" })))
+  table.insert(keys, create_smart_keybind("t", "CTRL", host_action("tab", false)))
+  table.insert(keys, create_smart_keybind("t", "SUPER", host_action("tab", false)))
+  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", true)))
+  table.insert(keys, create_smart_keybind("t", "SUPER|SHIFT", host_action("tab", true)))
 
   table.insert(
     keys,

@@ -19,6 +19,7 @@ Register the providers you want:
 let
   system = pkgs.stdenv.hostPlatform.system;
   hosts = inputs.tether.packages.${system}.provider-wezterm;
+  terminals = inputs.sysinit-wezterm.packages.${system}.provider-zmx;
   sessions = inputs.seshy.packages.${system}.provider-wezterm;
   folders = inputs.sysinit-wezterm.packages.${system}.provider-zoxide;
 in {
@@ -27,6 +28,7 @@ in {
     enable = true;
     settings.picker.providers = [
       { key = "!"; name = "tether"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
+      { key = "$"; name = "zmx"; manifest = "${terminals}/share/wezterm/providers/zmx.json"; }
       { key = "@"; name = "seshy"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
       { key = "#"; name = "zoxide"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
     ];
@@ -37,6 +39,21 @@ in {
 The host module supplies flake inputs through Home Manager's `extraSpecialArgs`.
 Each registered shortcut also appears in the command palette.
 Provider icons and row fields come from the provider response.
+
+The header groups providers, navigation, and actions. Provider order follows
+configuration order: Tether, Zmx, Seshy, then zoxide.
+
+Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
+host. Add Shift to use the local host. These chords take priority over shell
+widgets and application bindings; locked mode passes them through.
+
+Native mux panes retain their domain. SSH processes reconnect with their
+destination and connection options, without replaying remote commands or
+explicit port forwards. Mosh clients retain their original `user@host` target.
+If Mosh's process title does not expose an unambiguous target, the action reports
+an error instead of opening a pane on the wrong host.
+
+The [Zmx provider](extras/zmx/README.md) attaches existing local persistent sessions.
 
 ## Window launcher
 

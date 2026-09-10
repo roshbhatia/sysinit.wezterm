@@ -167,9 +167,10 @@ package.loaded["sysinit.pkg.utils"] = {
       picker = {
         command = { "picker-call" },
         providers = {
-          { key = "@", name = "sessions", manifest = "sessions.json" },
-          { key = "!", name = "hosts", manifest = "hosts.json" },
-          { key = "#", name = "folders", manifest = "folders.json" },
+          { key = "!", name = "tether", manifest = "hosts.json" },
+          { key = "$", name = "zmx", manifest = "zmx.json" },
+          { key = "@", name = "seshy", manifest = "sessions.json" },
+          { key = "#", name = "zoxide", manifest = "folders.json" },
         },
       },
       cwd_aliases = { sy = "/state/seshy/sessions" },
@@ -221,7 +222,7 @@ local pane = {
 key_binding("h", "CTRL").action(window, pane)
 assert(performed[1].SendKey.key == "h", "CTRL-h did not pass through to Neovim")
 key_binding("v", "CTRL").action(window, pane)
-assert(performed[2].SplitHorizontal.domain == "CurrentPaneDomain", "CTRL-v did not split from Neovim")
+assert(performed[2].SplitPane.command.domain == "CurrentPaneDomain", "CTRL-v did not split from Neovim")
 key_binding("s", "CTRL|SHIFT").action(window, pane)
 assert(performed[3].SplitPane.direction == "Down", "CTRL-SHIFT-s did not create a top-level down split")
 key_binding("v", "CTRL|SHIFT").action(window, pane)
@@ -238,7 +239,11 @@ for _, chord in ipairs({
 }) do
   local before = #performed
   key_binding(chord[1], chord[2]).action(window, pane)
-  assert(performed[before + 1].SendKey.key == chord[1], chord[2] .. "-" .. chord[1] .. " did not reach slk")
+  if chord[1] == "s" or chord[1] == "v" or chord[1] == "t" then
+    assert(not performed[before + 1].SendKey, "host creation chord was passed through")
+  else
+    assert(performed[before + 1].SendKey.key == chord[1], chord[2] .. "-" .. chord[1] .. " did not reach slk")
+  end
 end
 current_process = "zsh"
 key_binding("h", "CTRL").action(window, pane)
@@ -286,7 +291,8 @@ assert(not selector.alphabet:find("k", 1, true), "k selects a row instead of mov
 assert(not selector.alphabet:find("x", 1, true), "x selects a row after the close action moved out of the picker")
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
 assert(
-  require("sysinit.pkg.ui.switcher").session_tree_description() == "  j/k nav  Enter open  x close  / filter  Esc quit",
+  require("sysinit.pkg.ui.switcher").session_tree_description()
+    == "  ! tether  $ zmx  @ seshy  # zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
@@ -310,7 +316,7 @@ for _, binding in ipairs(session_config.key_tables.sysinit_session_tree) do
   session_keys[binding.key] = binding
 end
 assert(
-  session_keys["@"] and session_keys["!"] and session_keys["#"] and session_keys.x,
+  session_keys["@"] and session_keys["!"] and session_keys["#"] and session_keys["$"] and session_keys.x,
   "session actions are absent from the hidden key table"
 )
 assert(session_keys["/"], "slash cannot leave the action layer and enter filtering")
@@ -812,3 +818,41 @@ assert(not valid, "final validation could not fail the configuration")
 assert(tostring(validation_error):find("invalid final config", 1, true), "validation failure lost its cause")
 
 print("WezTerm modules, plugins, and chords passed")
+
+local host_spawn = require("sysinit.pkg.host_spawn")
+local function process_pane(info)
+  return {
+    get_foreground_process_info = function()
+      return info
+    end,
+  }
+end
+local ssh_pane = process_pane({
+  executable = "/usr/bin/ssh",
+  argv = { "ssh", "-p", "2222", "-l", "admin", "-L", "8080:localhost:80", "arrakis", "deploy" },
+})
+local remote_tab = host_spawn.action(ssh_pane, "tab", false).SpawnCommandInNewTab
+assert(
+  table.concat(remote_tab.args, " ") == "ssh -o ClearAllForwardings=yes -o RemoteCommand=none -p 2222 -l admin arrakis",
+  "SSH split replayed a command or port forward"
+)
+assert(remote_tab.domain.DomainName == "local", "SSH reconnect did not launch locally")
+local mosh_pane = process_pane({
+  executable = "/bin/mosh-client",
+  argv = { "mosh-client", "-# admin@arrakis |", "100.94.4.109", "60001" },
+})
+local remote_split = host_spawn.action(mosh_pane, "Right", false).SplitPane
+assert(table.concat(remote_split.command.args, " ") == "mosh admin@arrakis", "Mosh split lost its original destination")
+for _, kind in ipairs({ "Down", "Right", "tab" }) do
+  local action = host_spawn.action(mosh_pane, kind, true)
+  local command = kind == "tab" and action.SpawnCommandInNewTab or action.SplitPane.command
+  assert(command.domain.DomainName == "local" and command.args == nil, "local override retained the remote command")
+end
+assert(
+  host_spawn.action(process_pane(nil), "tab", false).SpawnCommandInNewTab.domain == "CurrentPaneDomain",
+  "native mux domain was discarded"
+)
+local unknown_mosh =
+  process_pane({ executable = "/bin/mosh-client", argv = { "mosh-client", "100.94.4.109", "60001" } })
+local unknown_action, unknown_error = host_spawn.action(unknown_mosh, "tab", false)
+assert(unknown_action == nil and unknown_error, "unknown Mosh target silently spawned locally")

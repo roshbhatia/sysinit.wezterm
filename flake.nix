@@ -39,7 +39,17 @@
             inherit pkgs;
             core = pkgs.zoxide;
           };
-          extras = self.packages.${system}.provider-zoxide;
+          provider-zmx = import ./extras/zmx {
+            inherit pkgs;
+            core = pkgs.zmx;
+          };
+          extras = pkgs.symlinkJoin {
+            name = "wezterm-providers";
+            paths = [
+              self.packages.${system}.provider-zoxide
+              self.packages.${system}.provider-zmx
+            ];
+          };
           full = pkgs.symlinkJoin {
             name = "sysinit-wezterm-full";
             paths = [
@@ -63,6 +73,7 @@
               pkgs.go
               pkgs.git
               pkgs.zoxide
+              pkgs.zmx
               pkgs.lua5_4
               pkgs.stylua
               pkgs.nixfmt
@@ -136,13 +147,39 @@
                 nativeBuildInputs = [
                   pkgs.lua5_4
                   pkgs.python3
+                  pkgs.uv
                 ];
               }
               ''
                 export HOME="$TMPDIR"
                 lua ${./checks/wezterm.lua} ${./lua} ${./checks/fixtures/wezterm-plugin}
                 cd ${self}
-                python3 -m unittest discover -s checks -p 'test_*.py'
+                uv run --offline --no-project --no-managed-python --python ${pkgs.python3}/bin/python3 -m unittest discover -s checks -p 'test_*.py'
+                touch $out
+              '';
+          zmx =
+            pkgs.runCommand "wezterm-zmx-attach-test"
+              {
+                nativeBuildInputs = [
+                  pkgs.zmx
+                  pkgs.coreutils
+                  pkgs.jq
+                ];
+              }
+              ''
+                export HOME="$TMPDIR"
+                export ZMX_DIR="$TMPDIR/zmx"
+                export ZMX_SESSION_PREFIX=""
+                session=wezterm-provider-test
+                trap 'zmx kill "$session" --force >/dev/null 2>&1 || true' EXIT
+                zmx attach "$session" sleep 120 >/dev/null 2>&1 &
+                for attempt in $(seq 1 100); do
+                  if zmx list --short | grep -Fxq "$session"; then break; fi
+                  sleep 0.05
+                done
+                request='{"version":"provider/v1","kind":"request","requestId":"smoke","capability":"picker.open","input":{"id":"wezterm-provider-test"}}'
+                printf '%s\n' "$request" | ${self.packages.${system}.provider-zmx}/bin/zmx-picker > plan.json
+                jq -e '.status == "ok" and .output.command[1:3] == ["-u","ZMX_SESSION"] and .output.command[4:6] == ["attach","wezterm-provider-test"]' plan.json
                 touch $out
               '';
         }

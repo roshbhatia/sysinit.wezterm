@@ -1,0 +1,13 @@
+{
+  "name": "zmx",
+  "summary": "Attach a persistent terminal session from the session picker",
+  "replay": false,
+  "core": "sysinit.wezterm",
+  "nix": "github:roshbhatia/sysinit.wezterm#provider-zmx",
+  "brew": "sysinit-wezterm-provider-zmx",
+  "binary": "zmx-picker",
+  "dependencies": ["python@3.13", "uv", "neurosnap/tap/zmx"],
+  "manifest_path": "share/wezterm/providers/zmx.json",
+  "status": "pending",
+  "runtime_note": "Register this provider on `$`. It lists existing local Zmx sessions. Attach clears inherited ZMX_SESSION so it cannot switch another client."
+}
