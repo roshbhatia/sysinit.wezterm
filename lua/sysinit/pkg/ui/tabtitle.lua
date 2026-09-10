@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 local ui_badges = require("sysinit.pkg.ui.badges")
 local ui_format = require("sysinit.pkg.ui.format")
+local ui_statusbar = require("sysinit.pkg.ui.statusbar")
 
 local nf = wezterm.nerdfonts or {}
 
@@ -18,7 +19,7 @@ function M.format(tab, cfg, ctx)
   end
 
   if explicit ~= "" and not explicit:match("^%d+$") then
-    return explicit
+    return explicit .. " " .. ui_statusbar.tab_index(tab)
   end
 
   local dir
@@ -42,7 +43,7 @@ function M.format(tab, cfg, ctx)
   label = label or dir or proc or "shell"
 
   if not (ctx.sigil_ok and ctx.ribbon_ok) then
-    return label
+    return label .. " " .. ui_statusbar.tab_index(tab)
   end
 
   local r = ctx.ribbon.new("tab")
@@ -82,6 +83,7 @@ function M.format(tab, cfg, ctx)
     end
   end
 
+  r:append(nil, nil, " " .. ui_statusbar.tab_index(tab))
   return r:items()
 end
 

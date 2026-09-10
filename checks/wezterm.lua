@@ -548,6 +548,40 @@ assert(#choices == 2 and targets["ws:alpha"] and targets["ws:remote:alpha"], "li
 assert(not targets["ws:directory"], "directory launcher rows leaked into the tree")
 
 local windowtitle = require("sysinit.pkg.ui.windowtitle")
+local statusbar = require("sysinit.pkg.ui.statusbar")
+local tabtitle = require("sysinit.pkg.ui.tabtitle")
+assert(statusbar.tab_index({ tab_index = 0 }) == "[1]")
+assert(statusbar.tab_index({ tab_index = 8 }) == "[9]")
+assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" }) == "review [2]")
+assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == "shell [1]")
+local saved_windows = mux_windows
+mux_windows = {}
+for _, entry in ipairs({ { 4, "default" }, { 7, "other" }, { 12, "default" } }) do
+  mux_windows[#mux_windows + 1] = {
+    window_id = function()
+      return entry[1]
+    end,
+    get_workspace = function()
+      return entry[2]
+    end,
+  }
+end
+local status_window = {
+  active_workspace = function()
+    return "default"
+  end,
+  window_id = function()
+    return 12
+  end,
+}
+assert(statusbar.window_index(status_window) == "[2] ")
+local chips = statusbar.session_chips(status_window, {}, { default = 1, review = 2 }, {
+  idle = "gray",
+  name = "white",
+  chrome = "gray",
+})
+assert(chips == "  · default [1]  · review [2] ", chips)
+mux_windows = saved_windows
 local test_home = os.getenv("HOME") or "/home/test"
 local title = windowtitle.format({
   active_pane = {

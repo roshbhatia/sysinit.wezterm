@@ -4,6 +4,23 @@ local ui_panes = require("sysinit.pkg.ui.panes")
 
 local M = {}
 
+function M.tab_index(tab)
+  return "[" .. tostring(tab.tab_index + 1) .. "]"
+end
+
+function M.window_index(window)
+  local index = 0
+  for _, candidate in ipairs(wezterm.mux.all_windows()) do
+    if candidate:get_workspace() == window:active_workspace() then
+      index = index + 1
+      if candidate:window_id() == window:window_id() then
+        return "[" .. tostring(index) .. "] "
+      end
+    end
+  end
+  return ""
+end
+
 function M.agent_status(sessions)
   local now = os.time()
   local best, count = nil, 0
@@ -84,7 +101,7 @@ function M.session_chips(window, sessions, slots, colors)
     items[#items + 1] = { Attribute = { Underline = is_active and "Single" or "None" } }
     items[#items + 1] = { Attribute = { Intensity = (is_active or needs_attention) and "Bold" or "Normal" } }
     items[#items + 1] = { Foreground = { Color = fg } }
-    items[#items + 1] = { Text = "  " .. tostring(entry.slot) .. " " }
+    items[#items + 1] = { Text = "  " }
     items[#items + 1] = { Foreground = { Color = sc } }
     items[#items + 1] = { Text = status and (ui_format.state_icons[status] or "●") or "·" }
     items[#items + 1] = { Foreground = { Color = fg } }
@@ -95,6 +112,7 @@ function M.session_chips(window, sessions, slots, colors)
       items[#items + 1] = { Foreground = { Color = colors.chrome } }
       items[#items + 1] = { Text = " " .. inside }
     end
+    items[#items + 1] = { Text = " [" .. tostring(entry.slot) .. "]" }
   end
   items[#items + 1] = { Text = " " }
   return wezterm.format(items)
