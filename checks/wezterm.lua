@@ -280,6 +280,18 @@ local before = #performed
 key_binding("n", "CTRL").action(window, pane)
 assert(performed[before + 1].SendKey.key == "n", "CTRL-n did not reach the Traces command picker")
 
+current_process = "diffnav"
+for _, key in ipairs({ "f", "u", "d" }) do
+  local before = #performed
+  key_binding(key, "CTRL").action(window, pane)
+  assert(performed[before + 1].SendKey.key == key, "reader chord did not reach diffnav")
+end
+for _, key in ipairs({ "s", "v", "t" }) do
+  local before = #performed
+  key_binding(key, "CTRL").action(window, pane)
+  assert(not performed[before + 1].SendKey, "reader changed same-host terminal bindings")
+end
+
 local selector = require("sysinit.pkg.ui.switcher").session_selector_options({
   { id = "ws:newest", label = "newest" },
   { id = "ws:older", label = "older" },

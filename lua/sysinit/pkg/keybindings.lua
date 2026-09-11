@@ -41,6 +41,7 @@ local TRACE_KEYS = (function()
   end
   both[#both + 1] = "traces"
   both[#both + 1] = "orc"
+  both[#both + 1] = "diffnav"
   return both
 end)()
 
@@ -73,6 +74,8 @@ local TUI_SCROLL = (function()
   both[#both + 1] = "traces"
   both[#both + 1] = "orc"
   both[#both + 1] = "slk"
+  both[#both + 1] = "diffnav"
+  both[#both + 1] = "changes"
   return both
 end)()
 
