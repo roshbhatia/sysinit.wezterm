@@ -287,8 +287,8 @@ function M.setup(config)
           right = "",
         },
         tab_separators = {
-          left = " ",
-          right = " ",
+          left = "",
+          right = "",
         },
       },
       sections = {
@@ -302,14 +302,18 @@ function M.setup(config)
         tabline_y = {},
         tabline_z = { "domain", ui_statusbar.window_index },
         tab_active = {
+          { Text = "  " },
           { "parent", padding = 0 },
           "/",
           { "cwd", padding = { left = 0, right = 1 } },
           ui_statusbar.tab_index,
+          { Text = "  " },
         },
         tab_inactive = {
+          { Text = "  " },
           { "cwd", padding = { left = 0, right = 1 } },
           ui_statusbar.tab_index,
+          { Text = "  " },
         },
       },
       extensions = {},
@@ -437,15 +441,17 @@ function M.setup(config)
     })
   end
 
-  wezterm.on("format-tab-title", function(tab, _tabs, _panes, cfg, _hover, _max_width)
-    return ui_tabtitle.format(tab, cfg, {
-      home = home,
-      sigil_ok = sigil_ok,
-      sigil = sigil,
-      ribbon_ok = ribbon_ok,
-      ribbon = ribbon,
-    })
-  end)
+  if not tabline_ok then
+    wezterm.on("format-tab-title", function(tab, _tabs, _panes, cfg, _hover, _max_width)
+      return ui_tabtitle.format(tab, cfg, {
+        home = home,
+        sigil_ok = sigil_ok,
+        sigil = sigil,
+        ribbon_ok = ribbon_ok,
+        ribbon = ribbon,
+      })
+    end)
+  end
 
   wezterm.on("format-window-title", function(tab, pane)
     local workspace = ""
