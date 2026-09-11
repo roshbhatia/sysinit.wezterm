@@ -28,14 +28,18 @@ for _, active in ipairs({ true, false }) do
       active_pane = { current_working_dir = { file_path = "/github/sysinit" } },
     }
     local items = title_handlers[1](tab, { tab }, {}, config, hover, 32)
-    local text = ""
-    for _, item in ipairs(items) do
-      if type(item) == "table" and item.Text then
-        text = text .. item.Text
+    if type(items) == "string" then
+      assert(items == " sysinit [1] ", "fallback tab padding was not rendered: " .. items)
+    else
+      local text = ""
+      for _, item in ipairs(items) do
+        if type(item) == "table" and item.Text then
+          text = text .. item.Text
+        end
       end
+      local expected = active and "  github/sysinit [1]  " or "  sysinit [1]  "
+      assert(text == expected, "tab padding was not rendered: " .. text)
     end
-    local expected = active and "  github/sysinit [1]  " or "  sysinit [1]  "
-    assert(text == expected, "tab padding was not rendered: " .. text)
   end
 end
 return config
