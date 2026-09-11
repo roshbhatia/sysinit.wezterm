@@ -5,6 +5,14 @@ M.DEFAULT_WORKSPACE = "default"
 M.DEFAULT_SLOT = 1
 M.MAX_SLOT = 9
 
+function M.ordered_windows()
+  local windows = wezterm.mux.all_windows()
+  table.sort(windows, function(a, b)
+    return a:window_id() < b:window_id()
+  end)
+  return windows
+end
+
 function M.active_names()
   local seen, names = {}, {}
   pcall(function()

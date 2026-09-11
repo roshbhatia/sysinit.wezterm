@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 local ui_format = require("sysinit.pkg.ui.format")
 local ui_panes = require("sysinit.pkg.ui.panes")
+local ui_sessions = require("sysinit.pkg.ui.sessions")
 
 local M = {}
 
@@ -10,7 +11,7 @@ end
 
 function M.window_index(window)
   local index = 0
-  for _, candidate in ipairs(wezterm.mux.all_windows()) do
+  for _, candidate in ipairs(ui_sessions.ordered_windows()) do
     if candidate:get_workspace() == window:active_workspace() then
       index = index + 1
       if candidate:window_id() == window:window_id() then

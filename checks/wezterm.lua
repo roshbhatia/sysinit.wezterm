@@ -556,7 +556,7 @@ assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" 
 assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == "shell [1]")
 local saved_windows = mux_windows
 mux_windows = {}
-for _, entry in ipairs({ { 4, "default" }, { 7, "other" }, { 12, "default" } }) do
+for _, entry in ipairs({ { 12, "default" }, { 7, "other" }, { 4, "default" } }) do
   mux_windows[#mux_windows + 1] = {
     window_id = function()
       return entry[1]
@@ -575,6 +575,23 @@ local status_window = {
   end,
 }
 assert(statusbar.window_index(status_window) == "[2] ")
+status_window.window_id = function()
+  return 4
+end
+assert(statusbar.window_index(status_window) == "[1] ")
+table.insert(mux_windows, 1, {
+  window_id = function()
+    return 15
+  end,
+  get_workspace = function()
+    return "default"
+  end,
+})
+assert(statusbar.window_index(status_window) == "[1] ")
+status_window.window_id = function()
+  return 15
+end
+assert(statusbar.window_index(status_window) == "[3] ")
 local chips = statusbar.session_chips(status_window, {}, { default = 1, review = 2 }, {
   idle = "gray",
   name = "white",

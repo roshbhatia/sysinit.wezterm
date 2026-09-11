@@ -23,7 +23,7 @@ function M.build(deck_states)
   local attention = {}
 
   pcall(function()
-    for _, win in ipairs(wezterm.mux.all_windows()) do
+    for _, win in ipairs(ui_sessions.ordered_windows()) do
       local workspace = win:get_workspace()
       local window_id = win:window_id()
       local ws = ws_index[workspace]
