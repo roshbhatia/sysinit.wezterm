@@ -19,7 +19,7 @@ function M.format(tab, cfg, ctx)
   end
 
   if explicit ~= "" and not explicit:match("^%d+$") then
-    return explicit .. " " .. ui_statusbar.tab_index(tab)
+    return " " .. explicit .. " " .. ui_statusbar.tab_index(tab) .. " "
   end
 
   local dir
@@ -43,10 +43,11 @@ function M.format(tab, cfg, ctx)
   label = label or dir or proc or "shell"
 
   if not (ctx.sigil_ok and ctx.ribbon_ok) then
-    return label .. " " .. ui_statusbar.tab_index(tab)
+    return " " .. label .. " " .. ui_statusbar.tab_index(tab) .. " "
   end
 
   local r = ctx.ribbon.new("tab")
+  r:append(nil, nil, " ")
 
   pcall(function()
     local uv = pane and pane.user_vars
@@ -83,7 +84,7 @@ function M.format(tab, cfg, ctx)
     end
   end
 
-  r:append(nil, nil, " " .. ui_statusbar.tab_index(tab))
+  r:append(nil, nil, " " .. ui_statusbar.tab_index(tab) .. " ")
   return r:items()
 end
 

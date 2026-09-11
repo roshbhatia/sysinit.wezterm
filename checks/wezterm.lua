@@ -564,8 +564,8 @@ local statusbar = require("sysinit.pkg.ui.statusbar")
 local tabtitle = require("sysinit.pkg.ui.tabtitle")
 assert(statusbar.tab_index({ tab_index = 0 }) == "[1]")
 assert(statusbar.tab_index({ tab_index = 8 }) == "[9]")
-assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" }) == "review [2]")
-assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == "shell [1]")
+assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" }) == " review [2] ")
+assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == " shell [1] ")
 local saved_windows = mux_windows
 mux_windows = {}
 for _, entry in ipairs({ { 12, "default" }, { 7, "other" }, { 4, "default" } }) do
