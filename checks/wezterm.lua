@@ -197,6 +197,44 @@ for _, binding in ipairs(key_config.keys) do
 end
 require("sysinit.pkg.validate").setup(key_config)
 
+-- Select to copy has to survive a pane that grabs the mouse and a pane that
+-- does not. WezTerm strips the bypass modifier before it matches a binding, so
+-- a grabbed pane arrives as NONE and an ungrabbed one keeps SHIFT; a streak
+-- bound in only one of the two silently drops the Up that copies.
+local mouse = {}
+for _, binding in ipairs(key_config.mouse_bindings) do
+  local kind, detail = next(binding.event)
+  local slot = kind .. ":" .. detail.streak .. ":" .. binding.mods
+  assert(detail.button == "Left", "a selection binding moved off the left button")
+  assert(not mouse[slot], "duplicate mouse binding: " .. slot)
+  mouse[slot] = binding.action
+end
+
+local SELECTION_MODE = { "Cell", "Word", "Line" }
+for streak, mode in ipairs(SELECTION_MODE) do
+  for _, mods in ipairs({ "NONE", "SHIFT" }) do
+    local down = assert(mouse["Down:" .. streak .. ":" .. mods], "no press for streak " .. streak .. " " .. mods)
+    local drag = assert(mouse["Drag:" .. streak .. ":" .. mods], "no drag for streak " .. streak .. " " .. mods)
+    local up = assert(mouse["Up:" .. streak .. ":" .. mods], "no release for streak " .. streak .. " " .. mods)
+    assert(down.SelectTextAtMouseCursor == mode, "streak " .. streak .. " " .. mods .. " does not select " .. mode)
+    assert(drag.ExtendSelectionToMouseCursor == mode, "streak " .. streak .. " " .. mods .. " does not extend " .. mode)
+    local copies = up.CompleteSelection == "ClipboardAndPrimarySelection"
+      or up.CompleteSelectionOrOpenLinkAtMouseCursor == "ClipboardAndPrimarySelection"
+    assert(copies, "streak " .. streak .. " " .. mods .. " does not copy on release")
+  end
+end
+
+-- A bare click keeps following links; SHIFT is how you select the link text.
+assert(mouse["Up:1:NONE"].CompleteSelectionOrOpenLinkAtMouseCursor, "a bare single click stopped opening links")
+assert(mouse["Up:1:SHIFT"].CompleteSelection, "shift click opens a link instead of selecting it")
+
+-- SemanticZone needs OSC 133 marks. Without them every cell keeps the default
+-- Output type, the scrollback merges into one zone, and triple click takes it
+-- all. Line is the mode that works with or without shell integration.
+for slot, action in pairs(mouse) do
+  assert(action.SelectTextAtMouseCursor ~= "SemanticZone", "SemanticZone is bound without OSC 133 marks: " .. slot)
+end
+
 local function key_binding(key, mods)
   for _, binding in ipairs(key_config.keys) do
     if binding.key == key and binding.mods == mods then
