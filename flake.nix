@@ -139,6 +139,9 @@
                     cat startup.log
                 if grep -E 'setup failed|Failed to load|No pinned dependency|ERROR|Error|Cloned https' startup.log; then exit 1; fi
                     test "$(grep -c '^    { key =' keys.lua)" -ge 80
+                    SYSINIT_WEZTERM_LUA=${./lua} PICKER_TEST_MARKER="$TMPDIR/picker-passed" wezterm --config-file ${./checks/picker_global.lua} show-keys --lua > /dev/null 2> picker.log
+                    cat picker.log
+                    test "$(cat "$TMPDIR/picker-passed")" = passed
                     touch $out
               '';
           lua =

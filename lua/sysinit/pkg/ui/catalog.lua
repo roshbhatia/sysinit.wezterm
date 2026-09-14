@@ -2,20 +2,20 @@ local wezterm = require("wezterm")
 local M = {}
 
 local function key(command, manifest)
-  return "picker_catalog:" .. table.concat(command, "\0") .. "\0" .. manifest
+  return "picker_catalog:v2:" .. table.concat(command, "\0") .. "\0" .. manifest
 end
 
 function M.peek(command, manifest)
   local entry = wezterm.GLOBAL[key(command, manifest)]
-  return entry and entry.catalog
+  return entry and entry.catalog_json and wezterm.json_parse(entry.catalog_json)
 end
 
 function M.load(command, manifest, callback)
   local cache_key = key(command, manifest)
   local entry = wezterm.GLOBAL[cache_key] or {}
-  if entry.catalog and os.time() - (entry.at or 0) < 5 then
+  if entry.catalog_json and os.time() - (entry.at or 0) < 5 then
     if callback then
-      callback(entry.catalog)
+      callback(M.peek(command, manifest))
     end
     return
   end
@@ -46,7 +46,7 @@ function M.load(command, manifest, callback)
     local current = wezterm.GLOBAL[cache_key] or {}
     if current.path ~= path then
       if callback then
-        callback(current.catalog, current.error)
+        callback(M.peek(command, manifest), current.error)
       end
       return
     end
@@ -61,7 +61,7 @@ function M.load(command, manifest, callback)
       current.path = nil
       current.error = result.ok and nil or result.error
       if result.ok then
-        current.catalog, current.at = result.catalog, os.time()
+        current.catalog_json, current.at = wezterm.json_encode(result.catalog), os.time()
       end
       wezterm.GLOBAL[cache_key] = current
       if callback then

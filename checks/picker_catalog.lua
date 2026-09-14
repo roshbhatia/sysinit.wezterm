@@ -10,6 +10,11 @@ local wezterm = {
   background_child_process = function(argv)
     started[#started + 1] = argv
   end,
+  json_encode = function(value)
+    local token = tostring(value)
+    payloads[token] = value
+    return token
+  end,
   json_parse = function(raw)
     return assert(payloads[raw], "incomplete")
   end,
