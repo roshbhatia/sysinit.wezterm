@@ -307,9 +307,7 @@ function M.setup(config)
           ui_statusbar.window_index,
           {
             "domain",
-            fmt = function(name)
-              return " " .. name
-            end,
+            padding = { left = 0, right = 1 },
           },
         },
         tab_active = {

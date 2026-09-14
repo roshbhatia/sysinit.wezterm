@@ -49,7 +49,8 @@ if ok then
   local sections = tabline.get_config().sections
   assert(sections.tabline_z[1] == require("sysinit.pkg.ui.statusbar").window_index)
   assert(sections.tabline_z[2][1] == "domain")
-  assert(sections.tabline_z[2].fmt("local") == " local")
+  assert(sections.tabline_z[2].fmt == nil)
+  assert(sections.tabline_z[2].padding.left == 0 and sections.tabline_z[2].padding.right == 1)
   local selected = tabline.get_theme().tab.active
   assert(config.colors.selection_fg == selected.fg and config.colors.selection_bg == selected.bg)
 end
