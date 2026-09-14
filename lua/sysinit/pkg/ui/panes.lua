@@ -104,7 +104,7 @@ function M.agent_state(p, deck_states, record)
     status, reason, since, agent, source = record.status, record.reason, record.since, record.agent, "record"
   end
 
-  if agent == "codex" and status ~= "working" then
+  if agent == "codex" and (status == "done" or status == "idle") then
     local ok, text = pcall(function()
       return p:get_lines_as_text(12)
     end)

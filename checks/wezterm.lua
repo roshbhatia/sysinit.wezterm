@@ -1106,6 +1106,9 @@ local state_pane = {
 local stale_record = { status = "done", agent = "codex", since = 100, reason = "your move" }
 local status, _, _, _, source = state_panes.agent_state(state_pane, {}, stale_record)
 assert(status == "working" and source == "screen", "active Codex turn inherited stale completion")
+stale_record.status = "waiting"
+assert(state_panes.agent_state(state_pane, {}, stale_record) == "waiting", "active footer hid an approval request")
+stale_record.status = "done"
 screen = "An explanation about working and esc to interrupt"
 assert(state_panes.agent_state(state_pane, {}, stale_record) == "done", "prose became activity")
 screen = "› Ask Codex to do anything"
