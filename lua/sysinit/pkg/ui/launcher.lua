@@ -268,7 +268,7 @@ function M.open(win, pane, key, before_show)
       return
     end
     if result.can_create then
-      table.insert(choices, 1, { id = create_id, label = creation.label or "New session" })
+      choices[#choices + 1] = { id = create_id, label = creation.label or "New session" }
     end
     if #choices == 0 then
       choices[1] = { id = "sysinit:empty", label = "No sessions" }

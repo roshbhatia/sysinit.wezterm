@@ -595,6 +595,7 @@ cached_catalog = valid_catalog
 launcher.open(launch_window, pane, "#")
 local picker = performed[#performed].InputSelector
 assert(picker.title == "Sessions" and #picker.choices == 2, "advertised creation is missing")
+assert(picker.choices[1].id == "review", "creation replaced the default existing-session selection")
 assert(#argv == 0, "warm provider opening started a synchronous process")
 picker.action(launch_window, pane, "review")
 local opened = performed[#performed].SwitchToWorkspace
@@ -602,7 +603,7 @@ assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "lo
 assert(argv[1][3] == "picker.open" and argv[1][4] == "review", "provider ID did not stay one argument")
 launcher.open(launch_window, pane, "#")
 picker = performed[#performed].InputSelector
-picker.action(launch_window, pane, picker.choices[1].id)
+picker.action(launch_window, pane, picker.choices[#picker.choices].id)
 local prompt = performed[#performed].PromptInputLine
 assert(prompt and prompt.description == "Name", "creation did not prompt for a name")
 before = #argv
@@ -629,7 +630,7 @@ before = #argv
 launcher.open(launch_window, pane, "!")
 picker = performed[#performed].InputSelector
 assert(picker.title == "WezTerm sessions" and #argv == before, "native sessions invoked a provider")
-picker.action(launch_window, pane, picker.choices[1].id)
+picker.action(launch_window, pane, picker.choices[#picker.choices].id)
 prompt = performed[#performed].PromptInputLine
 prompt.action(launch_window, pane, "scratch shell")
 opened = performed[#performed].SwitchToWorkspace
@@ -640,8 +641,8 @@ mux_windows = { mux_window("default", 1), mux_window("scratch shell", 2), mux_wi
 launcher.open(launch_window, pane, "!")
 picker = performed[#performed].InputSelector
 assert(#picker.choices == 3, "native picker included a provider-owned workspace")
-assert(picker.choices[2].id == "default" and picker.choices[3].id == "scratch shell")
-picker.action(launch_window, pane, picker.choices[1].id)
+assert(picker.choices[1].id == "default" and picker.choices[2].id == "scratch shell")
+picker.action(launch_window, pane, picker.choices[#picker.choices].id)
 prompt = performed[#performed].PromptInputLine
 prompt.action(launch_window, pane, "review")
 assert(notices[#notices] == "Session already exists: review", "native creation reused another provider's workspace")
