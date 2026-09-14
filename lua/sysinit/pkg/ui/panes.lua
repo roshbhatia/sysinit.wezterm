@@ -5,8 +5,8 @@ local M = {}
 
 M.state_rank = {
   waiting = 4,
-  done = 3,
-  working = 2,
+  working = 3,
+  done = 2,
   idle = 1,
 }
 
@@ -83,7 +83,7 @@ end
 ---@return string reason
 ---@return number|nil since
 ---@return string|nil agent
----@return string source one of "record", "uservar", "deck", or ""
+---@return string source one of "record", "uservar", "screen", "deck", or ""
 ---@param record table|false|nil pass the already-read record, false for none, nil to read here
 function M.agent_state(p, deck_states, record)
   local status, reason, since, agent, source
@@ -102,6 +102,19 @@ function M.agent_state(p, deck_states, record)
   end
   if record and record.status and (since == nil or (record.since or 0) > since) then
     status, reason, since, agent, source = record.status, record.reason, record.since, record.agent, "record"
+  end
+
+  if agent == "codex" and status ~= "working" then
+    local ok, text = pcall(function()
+      return p:get_lines_as_text(12)
+    end)
+    if ok and type(text) == "string" then
+      for line in text:gmatch("[^\n]+") do
+        if line:match("^%s*• Working %(.-esc to interrupt%)") then
+          return "working", "active turn", nil, agent, "screen"
+        end
+      end
+    end
   end
 
   if not status then

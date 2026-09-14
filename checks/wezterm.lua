@@ -1058,3 +1058,32 @@ local unknown_mosh =
   process_pane({ executable = "/bin/mosh-client", argv = { "mosh-client", "100.94.4.109", "60001" } })
 local unknown_action, unknown_error = host_spawn.action(unknown_mosh, "tab", false)
 assert(unknown_action == nil and unknown_error, "unknown Mosh target silently spawned locally")
+
+local state_panes = require("sysinit.pkg.ui.panes")
+local state_rollup = require("sysinit.pkg.ui.rollup")
+local screen = "• Working (14m 27s • esc to interrupt) · 2 background terminals running"
+local state_pane = {
+  get_user_vars = function()
+    return {}
+  end,
+  get_lines_as_text = function()
+    return screen
+  end,
+}
+local stale_record = { status = "done", agent = "codex", since = 100, reason = "your move" }
+local status, _, _, _, source = state_panes.agent_state(state_pane, {}, stale_record)
+assert(status == "working" and source == "screen", "active Codex turn inherited stale completion")
+screen = "An explanation about working and esc to interrupt"
+assert(state_panes.agent_state(state_pane, {}, stale_record) == "done", "prose became activity")
+screen = "› Ask Codex to do anything"
+assert(state_panes.agent_state(state_pane, {}, stale_record) == "done", "idle prompt erased completion")
+local reduced = state_rollup.reduce({
+  { workspace = "mixed", status = "done" },
+  { workspace = "mixed", status = "working" },
+})
+assert(reduced.mixed.status == "working", "finished pane hid a working pane")
+reduced = state_rollup.reduce({
+  { workspace = "mixed", status = "working" },
+  { workspace = "mixed", status = "waiting" },
+})
+assert(reduced.mixed.status == "waiting", "working pane hid an approval request")
