@@ -169,10 +169,10 @@ package.loaded["sysinit.pkg.utils"] = {
       picker = {
         command = { "picker-call" },
         providers = {
-          { key = "$", name = "tether", manifest = "hosts.json" },
           { key = "@", name = "zmx", manifest = "zmx.json" },
           { key = "#", name = "seshy", manifest = "sessions.json" },
-          { key = "%", name = "zoxide", manifest = "folders.json" },
+          { key = "$", name = "zoxide", manifest = "folders.json" },
+          { key = "%", name = "tether", manifest = "hosts.json" },
         },
       },
       cwd_aliases = { sy = "/state/seshy/sessions" },
@@ -347,7 +347,7 @@ assert(not selector.alphabet:find("x", 1, true), "x selects a row after the clos
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
 assert(
   require("sysinit.pkg.ui.switcher").session_tree_description()
-    == "  ! wezterm  $ tether  @ zmx  # seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
+    == "  ! wezterm  @ zmx  # seshy  $ zoxide  % tether  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
@@ -439,7 +439,7 @@ local context = {
 local first_config, second_config = {}, {}
 switcher.setup(first_config, { apply_to_config = function() end }, context)
 switcher.setup(second_config, { apply_to_config = function() end }, context)
-for _, shortcut in ipairs({ "!", "$", "@", "#" }) do
+for _, shortcut in ipairs({ "!", "@", "#", "$", "%" }) do
   tree_actions = {}
   for _, binding in ipairs(first_config.keys) do
     if binding.key == "s" and binding.mods == "SUPER" then
