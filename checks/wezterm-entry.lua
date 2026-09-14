@@ -46,6 +46,10 @@ end
 local loader = require("sysinit.pkg.plugin_loader")
 local ok, tabline = loader.load("tabline")
 if ok then
+  local sections = tabline.get_config().sections
+  assert(sections.tabline_z[1] == require("sysinit.pkg.ui.statusbar").window_index)
+  assert(sections.tabline_z[2][1] == "domain")
+  assert(sections.tabline_z[2].fmt("local") == " local")
   local selected = tabline.get_theme().tab.active
   assert(config.colors.selection_fg == selected.fg and config.colors.selection_bg == selected.bg)
 end

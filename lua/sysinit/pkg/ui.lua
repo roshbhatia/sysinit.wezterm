@@ -303,7 +303,15 @@ function M.setup(config)
         tabline_c = {},
         tabline_x = { session_chips, "ResetAttributes" },
         tabline_y = {},
-        tabline_z = { "domain", ui_statusbar.window_index },
+        tabline_z = {
+          ui_statusbar.window_index,
+          {
+            "domain",
+            fmt = function(name)
+              return " " .. name
+            end,
+          },
+        },
         tab_active = {
           { Text = "  " },
           ui_statusbar.tab_index,
