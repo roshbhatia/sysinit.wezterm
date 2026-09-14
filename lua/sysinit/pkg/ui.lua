@@ -237,12 +237,16 @@ function M.setup(config)
   local function tree_colors(win)
     return ui_session_tree.colors(win, config_data)
   end
-  local function agent_status()
-    return ui_statusbar.agent_status(agent_session_states())
-  end
+  local tabline_ok, tabline = plugin_loader.load("tabline")
 
   local function session_chips(window)
-    return ui_statusbar.session_chips(window, agent_session_states(), session_slots(), tree_colors(window))
+    return ui_statusbar.session_chips(
+      window,
+      agent_session_states(),
+      session_slots(),
+      tree_colors(window),
+      tabline_ok and tabline.get_theme().tab or nil
+    )
   end
 
   config.keys = config.keys or {}
@@ -269,7 +273,6 @@ function M.setup(config)
   -- in every browser, so a wezterm binding costs the chord everywhere. Stepping
   -- is [ and ] inside the session tree instead.
 
-  local tabline_ok, tabline = plugin_loader.load("tabline")
   if not tabline_ok then
     wezterm.log_warn("Failed to load tabline.wez: " .. tostring(tabline))
   end
@@ -298,27 +301,32 @@ function M.setup(config)
         },
         tabline_b = {},
         tabline_c = {},
-        tabline_x = { agent_status, session_chips, "ResetAttributes" },
+        tabline_x = { session_chips, "ResetAttributes" },
         tabline_y = {},
         tabline_z = { "domain", ui_statusbar.window_index },
         tab_active = {
           { Text = "  " },
+          ui_statusbar.tab_index,
+          { Text = " " },
           { "parent", padding = 0 },
           "/",
           { "cwd", padding = { left = 0, right = 1 } },
-          ui_statusbar.tab_index,
           { Text = "  " },
         },
         tab_inactive = {
           { Text = "  " },
-          { "cwd", padding = { left = 0, right = 1 } },
           ui_statusbar.tab_index,
+          { Text = " " },
+          { "cwd", padding = { left = 0, right = 1 } },
           { Text = "  " },
         },
       },
       extensions = {},
     })
     tabline.apply_to_config(config)
+    local selected = tabline.get_theme().tab.active
+    config.colors.selection_fg = selected.fg
+    config.colors.selection_bg = selected.bg
     ui_actions.set_refresh_handler(function(window)
       tabline.refresh(window, nil)
     end)

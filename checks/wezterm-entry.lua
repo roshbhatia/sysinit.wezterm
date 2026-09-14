@@ -29,7 +29,7 @@ for _, active in ipairs({ true, false }) do
     }
     local items = title_handlers[1](tab, { tab }, {}, config, hover, 32)
     if type(items) == "string" then
-      assert(items == " sysinit [1] ", "fallback tab padding was not rendered: " .. items)
+      assert(items == " [1] sysinit ", "fallback tab padding was not rendered: " .. items)
     else
       local text = ""
       for _, item in ipairs(items) do
@@ -37,9 +37,19 @@ for _, active in ipairs({ true, false }) do
           text = text .. item.Text
         end
       end
-      local expected = active and "  github/sysinit [1]  " or "  sysinit [1]  "
+      text = text:gsub("^%s+", ""):gsub("%s+$", ""):gsub("%s+", " ")
+      local expected = active and "[1] github/sysinit" or "[1] sysinit"
       assert(text == expected, "tab padding was not rendered: " .. text)
     end
   end
 end
+local loader = require("sysinit.pkg.plugin_loader")
+local ok, tabline = loader.load("tabline")
+if ok then
+  local selected = tabline.get_theme().tab.active
+  assert(config.colors.selection_fg == selected.fg and config.colors.selection_bg == selected.bg)
+end
+local marker = assert(io.open(assert(os.getenv("WEZTERM_TEST_RESULT")), "w"))
+marker:write("passed")
+marker:close()
 return config

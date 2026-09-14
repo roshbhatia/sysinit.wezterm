@@ -135,8 +135,9 @@
                     cp ${
                       pkgs.writeText "env.json" standalone.xdg.configFile."wezterm/env.json".text
                     } "$XDG_CONFIG_HOME/wezterm/env.json"
-                    SYSINIT_WEZTERM_LUA=${./lua} wezterm --config-file ${./checks/wezterm-entry.lua} show-keys --lua > keys.lua 2> startup.log
+                    SYSINIT_WEZTERM_LUA=${./lua} WEZTERM_TEST_RESULT="$TMPDIR/tab-passed" wezterm --config-file ${./checks/wezterm-entry.lua} show-keys --lua > keys.lua 2> startup.log
                     cat startup.log
+                    test "$(cat "$TMPDIR/tab-passed")" = passed
                 if grep -E 'setup failed|Failed to load|No pinned dependency|ERROR|Error|Cloned https' startup.log; then exit 1; fi
                     test "$(grep -c '^    { key =' keys.lua)" -ge 80
                     SYSINIT_WEZTERM_LUA=${./lua} PICKER_TEST_MARKER="$TMPDIR/picker-passed" wezterm --config-file ${./checks/picker_global.lua} show-keys --lua > /dev/null 2> picker.log

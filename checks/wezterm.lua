@@ -681,8 +681,8 @@ local statusbar = require("sysinit.pkg.ui.statusbar")
 local tabtitle = require("sysinit.pkg.ui.tabtitle")
 assert(statusbar.tab_index({ tab_index = 0 }) == "[1]")
 assert(statusbar.tab_index({ tab_index = 8 }) == "[9]")
-assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" }) == " review [2] ")
-assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == " shell [1] ")
+assert(tabtitle.format({ tab_index = 1, tab_title = "review" }, {}, { home = "" }) == " [2] review ")
+assert(tabtitle.format({ tab_index = 0 }, {}, { home = "" }) == " [1] shell ")
 local saved_windows = mux_windows
 mux_windows = {}
 for _, entry in ipairs({ { 12, "default" }, { 7, "other" }, { 4, "default" } }) do
@@ -726,7 +726,29 @@ local chips = statusbar.session_chips(status_window, {}, { default = 1, review =
   name = "white",
   chrome = "gray",
 })
-assert(chips == "  · default [1]  · review [2] ", chips)
+assert(chips == "  [1] default ·    [2] review ·  ", chips)
+local original_format = wezterm.format
+local styled
+wezterm.format = function(items)
+  styled = items
+  return original_format(items)
+end
+statusbar.session_chips(status_window, {}, { default = 1, review = 2 }, {
+  idle = "gray",
+  name = "white",
+  chrome = "gray",
+}, {
+  active = { fg = "active-fg", bg = "active-bg" },
+  inactive = { fg = "inactive-fg", bg = "inactive-bg" },
+})
+wezterm.format = original_format
+local backgrounds = {}
+for _, item in ipairs(styled) do
+  if type(item) == "table" and item.Background then
+    backgrounds[#backgrounds + 1] = item.Background.Color
+  end
+end
+assert(backgrounds[1] == "active-bg" and backgrounds[2] == "inactive-bg", "session selection diverged from tab colors")
 mux_windows = saved_windows
 local test_home = os.getenv("HOME") or "/home/test"
 local title = windowtitle.format({
