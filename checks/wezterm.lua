@@ -169,10 +169,10 @@ package.loaded["sysinit.pkg.utils"] = {
       picker = {
         command = { "picker-call" },
         providers = {
-          { key = "!", name = "tether", manifest = "hosts.json" },
-          { key = "$", name = "zmx", manifest = "zmx.json" },
-          { key = "@", name = "seshy", manifest = "sessions.json" },
-          { key = "#", name = "zoxide", manifest = "folders.json" },
+          { key = "$", name = "tether", manifest = "hosts.json" },
+          { key = "@", name = "zmx", manifest = "zmx.json" },
+          { key = "#", name = "seshy", manifest = "sessions.json" },
+          { key = "%", name = "zoxide", manifest = "folders.json" },
         },
       },
       cwd_aliases = { sy = "/state/seshy/sessions" },
@@ -254,6 +254,9 @@ local window = {
   end,
 }
 local pane = {
+  pane_id = function()
+    return 12
+  end,
   get_user_vars = function()
     return pane_vars
   end,
@@ -344,10 +347,23 @@ assert(not selector.alphabet:find("x", 1, true), "x selects a row after the clos
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
 assert(
   require("sysinit.pkg.ui.switcher").session_tree_description()
-    == "  ! tether  $ zmx  @ seshy  # zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
+    == "  ! wezterm  $ tether  @ zmx  # seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
+local cached_catalog, delivered_catalog, deliver_callback
+package.loaded["sysinit.pkg.ui.catalog"] = {
+  peek = function()
+    return cached_catalog
+  end,
+  load = function(_, _, callback)
+    if callback then
+      deliver_callback = callback
+    end
+  end,
+}
+package.loaded["sysinit.pkg.ui.launcher"] = nil
+package.loaded["sysinit.pkg.ui.switcher"] = nil
 local session_config = {}
 local switcher = require("sysinit.pkg.ui.switcher")
 switcher.setup(session_config, { apply_to_config = function() end }, {
@@ -509,6 +525,19 @@ assert(launcher.spawn(plan).domain.DomainName == "local", "provider opened on th
 assert(launcher.spawn({ kind = "spawn", cwd = "relative", command = {}, environment = {} }) == nil)
 local performed, notices, argv = {}, {}, {}
 local launch_window = {
+  active_pane = function()
+    return pane
+  end,
+  window_id = function()
+    return 8
+  end,
+  mux_window = function()
+    return {
+      active_pane = function()
+        return pane
+      end,
+    }
+  end,
   perform_action = function(_, value)
     performed[#performed + 1] = value
   end,
@@ -516,95 +545,107 @@ local launch_window = {
     notices[#notices + 1] = message
   end,
 }
+local valid_catalog = {
+  descriptor = { title = "Sessions", icon = "md_layers", create = { label = "New session", prompt = "Name" } },
+  listed = { items = { { id = "review", segments = { { text = "review", role = "name" } } } } },
+  can_create = true,
+}
 child_process = function(args)
   argv[#argv + 1] = args
-  return true, args[3], ""
+  return true, "plan", ""
 end
-json_parse = function(text)
-  if text == "picker.describe" then
-    return { title = "Sessions", icon = "md_layers" }
-  end
-  if text == "picker.list" then
-    return { items = { { id = "review", segments = { { text = "review", role = "name" } } } } }
-  end
+json_parse = function()
   return plan
 end
-launcher.open(launch_window, pane, "@")
-local picker = performed[#performed].InputSelector
-assert(picker.title == "Sessions" and #picker.choices == 1)
+launcher.open(launch_window, pane, "#")
+assert(performed[#performed].InputSelector.title == "Loading seshy", "cold provider did not display immediately")
+assert(#argv == 0, "cold provider blocked the keypress on a child process")
+local cancelled = performed[#performed].InputSelector
+cancelled.action(launch_window, pane, nil)
 local before = #performed
-picker.action(launch_window, pane, nil)
-assert(#performed == before and #argv == 2, "cancel resolved a provider item")
+deliver_callback(valid_catalog)
+assert(#performed == before, "cancelled provider loading reopened its selector")
+launcher.open(launch_window, pane, "#")
+launcher.cancel(launch_window)
+before = #performed
+deliver_callback(valid_catalog)
+assert(#performed == before, "returning to the tree allowed an old provider to reopen")
+launcher.open(launch_window, pane, "#")
+local previous_active_pane = launch_window.active_pane
+launch_window.active_pane = function()
+  return {
+    pane_id = function()
+      return 99
+    end,
+  }
+end
+before = #performed
+deliver_callback(valid_catalog)
+assert(#performed == before, "provider loading replaced another overlay")
+launch_window.active_pane = previous_active_pane
+launcher.open(launch_window, pane, "#")
+local obsolete_callback = deliver_callback
+launcher.open(launch_window, pane, "%")
+before = #performed
+obsolete_callback(valid_catalog)
+assert(#performed == before, "an old provider response replaced the current picker")
+deliver_callback(valid_catalog)
+assert(performed[#performed].InputSelector.title == "Sessions")
+cached_catalog = valid_catalog
+launcher.open(launch_window, pane, "#")
+local picker = performed[#performed].InputSelector
+assert(picker.title == "Sessions" and #picker.choices == 2, "advertised creation is missing")
+assert(#argv == 0, "warm provider opening started a synchronous process")
 picker.action(launch_window, pane, "review")
 local opened = performed[#performed].SwitchToWorkspace
 assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "local")
-assert(argv[3][4] == "review", "provider id did not stay one argument")
-local before_cached = #argv
-local ready = false
-launcher.open(launch_window, pane, "@", function()
-  ready = true
-end)
-assert(ready and #argv == before_cached + 1, "reopening fetched the provider description again")
-assert(argv[#argv][3] == "picker.list", "reopening did not refresh provider items")
-local before_cancelled = #performed
-launcher.open(launch_window, pane, "@", function()
-  return false
-end)
-assert(#performed == before_cancelled, "cancelled loading reopened the provider selector")
-local first_workspace = opened.name
-assert(first_workspace == "review", "provider workspace name contains a generated suffix")
-picker.action(launch_window, pane, "review")
-assert(performed[#performed].SwitchToWorkspace.name == first_workspace, "repeated launches changed workspace names")
-local focused = false
-mux_windows = {
-  {
-    get_workspace = function()
-      return first_workspace
-    end,
-    gui_window = function()
-      return {
-        focus = function()
-          focused = true
-        end,
-      }
-    end,
-  },
-}
-local before_reopen = #performed
-picker.action(launch_window, pane, "review")
-assert(focused and #performed == before_reopen, "existing provider workspace was not focused")
-mux_windows = {}
-child_process = function()
-  return false, "", "directory disappeared"
+assert(argv[1][3] == "picker.open" and argv[1][4] == "review", "provider ID did not stay one argument")
+launcher.open(launch_window, pane, "#")
+picker = performed[#performed].InputSelector
+picker.action(launch_window, pane, picker.choices[1].id)
+local prompt = performed[#performed].PromptInputLine
+assert(prompt and prompt.description == "Name", "creation did not prompt for a name")
+before = #argv
+prompt.action(launch_window, pane, nil)
+assert(#argv == before, "cancelled creation invoked the provider")
+wezterm.json_encode = function()
+  return '["nu"]'
 end
-before = #performed
-picker.action(launch_window, pane, "review")
-assert(#performed == before and notices[#notices] == "directory disappeared")
-local dismissed = false
-launcher.open(launch_window, pane, "@", function()
-  dismissed = true
-end)
-assert(not dismissed and #performed == before, "failed provider loading dismissed the current selector")
-
-child_process = function(args)
-  return true, args[3], ""
-end
+prompt.action(launch_window, pane, "new session")
+assert(argv[#argv][3] == "picker.create" and argv[#argv][4] == "new session")
+assert(performed[#performed].SwitchToWorkspace.spawn.set_environment_variables.WEZTERM_PICKER_SHELL == '["nu"]')
+valid_catalog.can_create = false
+launcher.open(launch_window, pane, "#")
+assert(#performed[#performed].InputSelector.choices == 1, "unadvertised creation was offered")
 for _, malformed in ipairs({ false, { id = "x", segments = { false } }, { id = "x", segments = "bad" } }) do
-  json_parse = function(value)
-    if value == "picker.describe" then
-      return { title = "Sessions", icon = "md_layers" }
-    end
-    return { items = { malformed } }
-  end
-  launcher.open(launch_window, pane, "@")
-  assert(#performed == before and notices[#notices] == "Provider returned an invalid or duplicate item")
+  cached_catalog = { descriptor = valid_catalog.descriptor, listed = { items = { malformed } } }
+  launcher.open(launch_window, pane, "#")
+  assert(notices[#notices] == "Provider returned an invalid or duplicate item")
 end
-json_parse = function()
-  return { title = false, icon = {} }
-end
-package.loaded["sysinit.pkg.ui.launcher"] = nil
-require("sysinit.pkg.ui.launcher").open(launch_window, pane, "@")
-assert(#performed == before and notices[#notices] == "Provider returned an invalid description")
+cached_catalog = { descriptor = { title = false, icon = {} }, listed = { items = {} } }
+launcher.open(launch_window, pane, "#")
+assert(notices[#notices] == "Provider returned an invalid description")
+before = #argv
+launcher.open(launch_window, pane, "!")
+picker = performed[#performed].InputSelector
+assert(picker.title == "WezTerm sessions" and #argv == before, "native sessions invoked a provider")
+picker.action(launch_window, pane, picker.choices[1].id)
+prompt = performed[#performed].PromptInputLine
+prompt.action(launch_window, pane, "scratch shell")
+opened = performed[#performed].SwitchToWorkspace
+assert(opened.name == "scratch shell" and opened.spawn.cwd == "/nonexistent" and opened.spawn.args == nil)
+assert(wezterm.GLOBAL.native_workspaces["scratch shell"], "native workspace ownership was not recorded")
+assert(#argv == before, "native creation invoked a provider")
+mux_windows = { mux_window("default", 1), mux_window("scratch shell", 2), mux_window("review", 3) }
+launcher.open(launch_window, pane, "!")
+picker = performed[#performed].InputSelector
+assert(#picker.choices == 3, "native picker included a provider-owned workspace")
+assert(picker.choices[2].id == "default" and picker.choices[3].id == "scratch shell")
+picker.action(launch_window, pane, picker.choices[1].id)
+prompt = performed[#performed].PromptInputLine
+prompt.action(launch_window, pane, "review")
+assert(notices[#notices] == "Session already exists: review", "native creation reused another provider's workspace")
+mux_windows = {}
 assert(launcher.spawn({ kind = "spawn", cwd = "/tmp", command = { args = "bad" }, environment = {} }) == nil)
 assert(launcher.spawn({ kind = "spawn", cwd = "/tmp", command = {}, environment = { ["BAD=KEY"] = "x" } }) == nil)
 

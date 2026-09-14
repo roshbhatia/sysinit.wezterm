@@ -4,6 +4,9 @@
 # dependencies = []
 # ///
 import json
+import concurrent.futures
+import os
+import tempfile
 import subprocess
 import sys
 import uuid
@@ -16,7 +19,7 @@ def call(manifest_path, capability, item=None):
         raise ValueError("provider does not support " + capability)
     request_id = str(uuid.uuid4())
     request = {"version": "provider/v1", "kind": "request", "requestId": request_id,
-               "capability": capability, "input": {"id": item} if item is not None else {}}
+               "capability": capability, "input": {"name" if capability == "picker.create" else "id": item} if item is not None else {}}
     action = manifest["actions"][capability]
     argv = manifest["command"] + action.get("argv", [])
     result = subprocess.run(argv, input=json.dumps(request) + "\n", text=True,
@@ -26,6 +29,8 @@ def call(manifest_path, capability, item=None):
     answer = None
     for line in result.stdout.splitlines():
         frame = json.loads(line)
+        if not isinstance(frame, dict):
+            raise ValueError("provider returned an invalid frame")
         if frame.get("version") != "provider/v1" or frame.get("requestId") != request_id:
             raise ValueError("provider returned an unrelated frame")
         if answer is not None:
@@ -39,9 +44,39 @@ def call(manifest_path, capability, item=None):
     return answer["output"]
 
 
+def catalog(manifest_path):
+    with open(manifest_path, encoding="utf-8") as source:
+        manifest = json.load(source)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        description = pool.submit(call, manifest_path, "picker.describe")
+        items = pool.submit(call, manifest_path, "picker.list")
+        return {"descriptor": description.result(), "listed": items.result(),
+                "can_create": "picker.create" in manifest.get("actions", {})}
+
+
+def write_catalog(manifest_path, destination):
+    try:
+        result = {"ok": True, "catalog": catalog(manifest_path)}
+    except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
+        result = {"ok": False, "error": str(error)}
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", dir=os.path.dirname(destination), delete=False, encoding="utf-8") as output:
+            temporary = output.name
+            json.dump(result, output)
+        if os.path.exists(destination):
+            os.replace(temporary, destination)
+    finally:
+        if temporary and os.path.exists(temporary):
+            os.unlink(temporary)
+
+
 if __name__ == "__main__":
     try:
-        print(json.dumps(call(*sys.argv[1:])))
+        if sys.argv[1] == "--catalog":
+            write_catalog(*sys.argv[2:])
+        else:
+            print(json.dumps(call(*sys.argv[1:])))
     except (OSError, ValueError, KeyError, subprocess.TimeoutExpired) as error:
         print(str(error), file=sys.stderr)
         sys.exit(1)

@@ -9,8 +9,7 @@ let
   runner = pkgs.writeShellApplication {
     name = "wezterm-picker-call";
     text = ''
-      exec ${pkgs.uv}/bin/uv --no-cache run --offline --no-managed-python --no-python-downloads \
-        --no-project --python ${pkgs.python3}/bin/python3 --script ${./scripts/picker-call.py} "$@"
+      exec ${pkgs.python3}/bin/python3 ${./scripts/picker-call.py} "$@"
     '';
   };
 in
@@ -41,7 +40,6 @@ in
         assertion = builtins.all (
           p:
           builtins.elem p.key [
-            "!"
             "@"
             "#"
             "$"

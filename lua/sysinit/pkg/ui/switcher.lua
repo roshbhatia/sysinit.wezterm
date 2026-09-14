@@ -334,6 +334,7 @@ function M.setup(config, wm, ctx)
     if win:active_key_table() == "sysinit_session_tree" then
       return
     end
+    launcher.cancel(win)
     filter = filter or "all"
     local tree = ctx.tree()
     local colors = ctx.colors(win)
@@ -381,6 +382,7 @@ function M.setup(config, wm, ctx)
     wezterm.GLOBAL["session_tree_action:" .. tree_window_id(win)] = nil
     win:perform_action(wezterm.action.ActivateKeyTable({ name = "sysinit_session_tree", one_shot = false }), pane)
     win:perform_action(wezterm.action.InputSelector(options), pane)
+    launcher.prefetch()
   end
 
   wm.session_enabled = true

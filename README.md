@@ -27,10 +27,10 @@ in {
   programs.sysinit-wezterm = {
     enable = true;
     settings.picker.providers = [
-      { key = "!"; name = "tether"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
-      { key = "$"; name = "zmx"; manifest = "${terminals}/share/wezterm/providers/zmx.json"; }
-      { key = "@"; name = "seshy"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
-      { key = "#"; name = "zoxide"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
+      { key = "$"; name = "tether"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
+      { key = "@"; name = "zmx"; manifest = "${terminals}/share/wezterm/providers/zmx.json"; }
+      { key = "#"; name = "seshy"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
+      { key = "%"; name = "zoxide"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
     ];
   };
 }
@@ -41,7 +41,17 @@ Each registered shortcut also appears in the command palette.
 Provider icons and row fields come from the provider response.
 
 The header groups providers, navigation, and actions. Provider order follows
-configuration order: Tether, Zmx, Seshy, then zoxide.
+configuration order after the built-in `!` WezTerm provider.
+The example uses `$` Tether, `@` Zmx, `#` Seshy, and `%` zoxide.
+
+`!` lists the default workspace and native sessions created through this picker.
+Choose `New session` and enter a name to start the configured shell at home.
+These sessions create no directories or worktrees. Their lifetime follows the running WezTerm workspace.
+
+Opening the tree refreshes provider catalogs in the background.
+Cached lists appear immediately; refreshes never replace an active selection or its filter.
+Cold loads show a cancellable loading view. No provider discovery runs from status ticks.
+Opening a selected item still asks its provider for a current process plan.
 
 Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
 host. Add Shift to use the local host. These chords take priority over shell
@@ -71,10 +81,21 @@ A provider manifest declares an executable argument list and these actions:
 | `picker.describe` | Selector title and Nerd Font icon name |
 | `picker.list` | Ordered items with stable IDs and display segments |
 | `picker.open` | A process plan for the selected ID |
+| `picker.create` (optional) | A process plan for creating a named session |
 
 The runner writes one `provider/v1` request to standard input.
 It accepts correlated event frames followed by one result frame.
 Commands run as argument lists with a five-second limit.
+
+The manifest advertises creation by including `actions["picker.create"]`.
+The optional description field `create` supplies `label` and `prompt` strings.
+The picker sends `input.name` after name entry; cancellation sends no creation request.
+Providers without the action get no creation entry.
+
+Creation returns the same spawn plan as opening. An interactive creator runs in the new terminal.
+`WEZTERM_PICKER_SHELL` contains the configured shell argument list as JSON.
+The provider helper can execute that shell after creation finishes.
+Seshy's helper runs `sy new`, preserves repository selection, and exits on cancellation without opening a shell.
 
 An item can render several fields in one row:
 
@@ -95,7 +116,7 @@ It removes control characters from display text.
 Opening an item returns an absolute working directory, command arguments, environment variables, and a workspace label.
 An empty command uses WezTerm's configured shell.
 A host connection runs its foreground command in a local pane.
-Cancellation starts no process.
+Cancelling a selection creates no terminal or session.
 
 The [zoxide extra](extras/zoxide/README.md) includes its installation instructions and demo.
 Host and session adapters live with [tether](https://github.com/roshbhatia/tether/tree/main/extras/wezterm)

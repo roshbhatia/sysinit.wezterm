@@ -153,6 +153,7 @@
               ''
                 export HOME="$TMPDIR"
                 lua ${./checks/wezterm.lua} ${./lua} ${./checks/fixtures/wezterm-plugin}
+                lua ${./checks/picker_catalog.lua} ${./lua}
                 cd ${self}
                 uv run --offline --no-project --no-managed-python --python ${pkgs.python3}/bin/python3 -m unittest discover -s checks -p 'test_*.py'
                 touch $out
