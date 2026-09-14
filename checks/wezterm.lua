@@ -47,10 +47,12 @@ local logged = {}
 local mux_windows = {}
 local mux_panes = {}
 local action = setmetatable({}, {
-  __index = function(_, name)
-    return function(value)
+  __index = function(self, name)
+    local constructor = function(value)
       return { [name] = value == nil and true or value }
     end
+    rawset(self, name, constructor)
+    return constructor
   end,
 })
 
@@ -371,18 +373,23 @@ assert(
 )
 assert(session_keys["/"], "slash cannot leave the action layer and enter filtering")
 local tree_actions = {}
+local active_tree_table
 local tree_window = {
+  active_key_table = function()
+    return active_tree_table
+  end,
   window_id = function()
     return 7
   end,
   perform_action = function(_, value)
     tree_actions[#tree_actions + 1] = value
+    if type(value) == "table" and value.ActivateKeyTable then
+      active_tree_table = value.ActivateKeyTable.name
+    elseif value == wezterm.action.PopKeyTable then
+      active_tree_table = nil
+    end
   end,
 }
-session_keys["@"].action(tree_window, pane)
-assert(#tree_actions == 2, "dot did not leave the session action table before accepting the row")
-assert(tree_actions[2].SendKey.key == "Enter", "dot did not accept the selected session row")
-tree_actions = {}
 session_keys["/"].action(tree_window, pane)
 assert(#tree_actions == 2, "slash did not leave the session action table")
 assert(tree_actions[2].SendKey.key == "/", "slash did not enter the native filter")
@@ -398,8 +405,10 @@ package.loaded["sysinit.pkg.ui.tree_rows"] = {
 local launcher_module = require("sysinit.pkg.ui.launcher")
 local original_open = launcher_module.open
 local launched
-launcher_module.open = function(_, _, key)
+launcher_module.open = function(_, _, key, before_show)
   launched = key
+  assert(active_tree_table == "sysinit_session_tree", "provider loading dismissed the tree")
+  before_show()
 end
 local context = {
   tree = function()
@@ -414,7 +423,7 @@ local context = {
 local first_config, second_config = {}, {}
 switcher.setup(first_config, { apply_to_config = function() end }, context)
 switcher.setup(second_config, { apply_to_config = function() end }, context)
-for _, shortcut in ipairs({ "!", "@", "#" }) do
+for _, shortcut in ipairs({ "!", "$", "@", "#" }) do
   tree_actions = {}
   for _, binding in ipairs(first_config.keys) do
     if binding.key == "s" and binding.mods == "SUPER" then
@@ -423,13 +432,23 @@ for _, shortcut in ipairs({ "!", "@", "#" }) do
   end
   local selection = tree_actions[#tree_actions].InputSelector
   assert(selection, "the session tree did not open")
+  local before_repeat = #tree_actions
+  for _, binding in ipairs(first_config.keys) do
+    if binding.key == "s" and binding.mods == "SUPER" then
+      binding.action(tree_window, pane)
+    end
+  end
+  assert(#tree_actions == before_repeat, "repeated opening stacked a persistent key table")
   for _, binding in ipairs(second_config.key_tables.sysinit_session_tree) do
     if binding.key == shortcut then
       binding.action(tree_window, pane)
     end
   end
-  selection.action(tree_window, pane, "ws:default", "default")
   assert(launched == shortcut, "a provider action was lost across configuration instances")
+  assert(active_tree_table == nil, "provider transition left the tree key table active")
+  for _, action in ipairs(tree_actions) do
+    assert(type(action) ~= "table" or not action.SendKey, "provider transition injected a key into the old selector")
+  end
   assert(wezterm.GLOBAL["session_tree_action:7"] == nil, "a completed provider action remained pending")
 end
 launcher_module.open = original_open
@@ -520,6 +539,18 @@ picker.action(launch_window, pane, "review")
 local opened = performed[#performed].SwitchToWorkspace
 assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "local")
 assert(argv[3][4] == "review", "provider id did not stay one argument")
+local before_cached = #argv
+local ready = false
+launcher.open(launch_window, pane, "@", function()
+  ready = true
+end)
+assert(ready and #argv == before_cached + 1, "reopening fetched the provider description again")
+assert(argv[#argv][3] == "picker.list", "reopening did not refresh provider items")
+local before_cancelled = #performed
+launcher.open(launch_window, pane, "@", function()
+  return false
+end)
+assert(#performed == before_cancelled, "cancelled loading reopened the provider selector")
 local first_workspace = opened.name
 assert(first_workspace == "review", "provider workspace name contains a generated suffix")
 picker.action(launch_window, pane, "review")
@@ -549,6 +580,11 @@ end
 before = #performed
 picker.action(launch_window, pane, "review")
 assert(#performed == before and notices[#notices] == "directory disappeared")
+local dismissed = false
+launcher.open(launch_window, pane, "@", function()
+  dismissed = true
+end)
+assert(not dismissed and #performed == before, "failed provider loading dismissed the current selector")
 
 child_process = function(args)
   return true, args[3], ""
@@ -566,7 +602,8 @@ end
 json_parse = function()
   return { title = false, icon = {} }
 end
-launcher.open(launch_window, pane, "@")
+package.loaded["sysinit.pkg.ui.launcher"] = nil
+require("sysinit.pkg.ui.launcher").open(launch_window, pane, "@")
 assert(#performed == before and notices[#notices] == "Provider returned an invalid description")
 assert(launcher.spawn({ kind = "spawn", cwd = "/tmp", command = { args = "bad" }, environment = {} }) == nil)
 assert(launcher.spawn({ kind = "spawn", cwd = "/tmp", command = {}, environment = { ["BAD=KEY"] = "x" } }) == nil)

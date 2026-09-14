@@ -3,6 +3,7 @@ local command = require("sysinit.pkg.command")
 local utils = require("sysinit.pkg.utils")
 local actions = require("sysinit.pkg.ui.actions")
 local M = {}
+local descriptions = {}
 
 local function array(value)
   if type(value) ~= "table" then
@@ -110,7 +111,7 @@ function M.label(item, descriptor)
   return wezterm.format(parts)
 end
 
-function M.open(win, pane, key)
+function M.open(win, pane, key, before_show)
   local provider
   for _, candidate in ipairs(M.providers()) do
     if candidate.key == key then
@@ -122,11 +123,16 @@ function M.open(win, pane, key)
     report(win, "No provider registered for " .. tostring(key))
     return
   end
-  local descriptor, describe_error = invoke(provider, "picker.describe")
+  local cache_key = provider.manifest .. "\0" .. table.concat(settings().command or {}, "\0")
+  local descriptor, describe_error = descriptions[cache_key]
+  if not descriptor then
+    descriptor, describe_error = invoke(provider, "picker.describe")
+  end
   if type(descriptor) ~= "table" or not text(descriptor.title) or not text(descriptor.icon) then
     report(win, describe_error or "Provider returned an invalid description")
     return
   end
+  descriptions[cache_key] = descriptor
   local listed, list_error = invoke(provider, "picker.list")
   if type(listed) ~= "table" or not array(listed.items) then
     report(win, list_error or "Provider returned no item list")
@@ -143,6 +149,9 @@ function M.open(win, pane, key)
   end
   if #choices == 0 then
     report(win, "No results from " .. tostring(descriptor.title))
+    return
+  end
+  if before_show and before_show() == false then
     return
   end
   win:perform_action(

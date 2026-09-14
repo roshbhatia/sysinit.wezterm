@@ -283,7 +283,16 @@ function M.setup(config, wm, ctx)
       key = spec.key,
       mods = "NONE",
       action = wezterm.action_callback(function(win, pane)
-        finish_session_tree_action(win, pane, spec.id)
+        if spec.id:sub(1, 9) == "provider:" then
+          launcher.open(win, pane, spec.key, function()
+            if win:active_key_table() ~= "sysinit_session_tree" then
+              return false
+            end
+            win:perform_action(wezterm.action.PopKeyTable, pane)
+          end)
+        else
+          finish_session_tree_action(win, pane, spec.id)
+        end
       end),
     }
   end
@@ -322,6 +331,9 @@ function M.setup(config, wm, ctx)
   end
 
   open_session_tree = function(win, pane, filter, notice)
+    if win:active_key_table() == "sysinit_session_tree" then
+      return
+    end
     filter = filter or "all"
     local tree = ctx.tree()
     local colors = ctx.colors(win)
@@ -352,12 +364,6 @@ function M.setup(config, wm, ctx)
           inner_win:perform_action(wezterm.action.PopKeyTable, inner_pane)
         end
       end)
-      if type(pending) == "string" and pending:sub(1, 9) == "provider:" then
-        wezterm.time.call_after(0.05, function()
-          launcher.open(inner_win, inner_pane, pending:sub(10))
-        end)
-        return
-      end
       if pending == "close-target" then
         if not id then
           return
