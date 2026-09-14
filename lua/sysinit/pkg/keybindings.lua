@@ -98,6 +98,10 @@ local function create_smart_keybind(key, mods, wezterm_action, opts)
         end
 
         local proc = utils.get_process_name(pane)
+        local app = pane:get_user_vars().SYSINIT_APP
+        if app and app ~= "" and pane:is_alt_screen_active() then
+          proc = app
+        end
         for _, p in ipairs(opts.passthrough) do
           if proc == p then
             win:perform_action({ SendKey = { key = key, mods = mods } }, pane)

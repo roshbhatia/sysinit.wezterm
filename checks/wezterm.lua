@@ -335,6 +335,22 @@ for _, key in ipairs({ "s", "v", "t" }) do
   assert(not performed[before + 1].SendKey, "reader changed same-host terminal bindings")
 end
 
+current_process = "ssh"
+pane_vars = { SYSINIT_APP = "traces" }
+pane.is_alt_screen_active = function()
+  return true
+end
+local before_remote = #performed
+key_binding("h", "CTRL").action(window, pane)
+assert(performed[before_remote + 1].SendKey.key == "h", "remote app did not receive navigation")
+pane.is_alt_screen_active = function()
+  return false
+end
+key_binding("h", "CTRL").action(window, pane)
+assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app captured shell navigation")
+
+pane_vars = {}
+
 local selector = require("sysinit.pkg.ui.switcher").session_selector_options({
   { id = "ws:newest", label = "newest" },
   { id = "ws:older", label = "older" },
@@ -831,7 +847,15 @@ local overrides = { preserved = true }
 local get_override_calls = 0
 local set_override_calls = 0
 local event_action
+local active_event_id = 1
 local event_window = {
+  active_pane = function()
+    return {
+      pane_id = function()
+        return active_event_id
+      end,
+    }
+  end,
   window_id = function()
     return 1
   end,
@@ -852,6 +876,9 @@ local event_window = {
 }
 local alt_screen = false
 local event_pane = {
+  pane_id = function()
+    return 1
+  end,
   get_dimensions = function()
     return { scrollback_rows = 100, viewport_rows = 20 }
   end,
@@ -864,6 +891,12 @@ handlers["user-var-changed"](event_window, event_pane, "wez_copy", "copied text"
 assert(clipboard.value == "copied text" and clipboard.target == "Clipboard", "wez_copy missed the clipboard")
 handlers["user-var-changed"](event_window, event_pane, "SYSINIT_NAV", "left:editor")
 assert(event_action.ActivatePaneDirection == "Left", "SYSINIT_NAV did not activate the left pane")
+active_event_id = 2
+event_action = nil
+handlers["user-var-changed"](event_window, event_pane, "SYSINIT_NAV", "right:late")
+assert(event_action == nil, "a delayed edge request moved another active pane")
+active_event_id = 1
+
 handlers["update-status"](event_window, event_pane)
 assert(overrides.preserved and overrides.enable_scroll_bar == nil, "the default scroll bar gained an override")
 assert(get_override_calls == 1 and set_override_calls == 0, "the initial default scroll bar state was reapplied")

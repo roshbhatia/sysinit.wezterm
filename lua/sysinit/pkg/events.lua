@@ -17,7 +17,8 @@ function M.setup(config)
       window:toast_notification("wezterm", value, nil, 4000)
     elseif name == "SYSINIT_NAV" then
       local dir = NAV_DIRECTIONS[tostring(value):match("^(%a+):") or ""]
-      if dir then
+      local active = window:active_pane()
+      if dir and active and active:pane_id() == pane:pane_id() then
         window:perform_action(wezterm.action.ActivatePaneDirection(dir), pane)
       end
     end
