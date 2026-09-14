@@ -169,10 +169,10 @@ package.loaded["sysinit.pkg.utils"] = {
       picker = {
         command = { "picker-call" },
         providers = {
-          { key = "@", name = "zmx", manifest = "zmx.json" },
-          { key = "#", name = "seshy", manifest = "sessions.json" },
-          { key = "$", name = "zoxide", manifest = "folders.json" },
-          { key = "%", name = "tether", manifest = "hosts.json" },
+          { key = "@", name = "tether", manifest = "hosts.json" },
+          { key = "#", name = "zmx", manifest = "zmx.json" },
+          { key = "$", name = "seshy", manifest = "sessions.json" },
+          { key = "%", name = "zoxide", manifest = "folders.json" },
         },
       },
       cwd_aliases = { sy = "/state/seshy/sessions" },
@@ -347,7 +347,7 @@ assert(not selector.alphabet:find("x", 1, true), "x selects a row after the clos
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
 assert(
   require("sysinit.pkg.ui.switcher").session_tree_description()
-    == "  ! wezterm  @ zmx  # seshy  $ zoxide  % tether  |  j/k move  / filter  |  Enter open  x close  Esc quit",
+    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
@@ -557,7 +557,7 @@ end
 json_parse = function()
   return plan
 end
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 assert(performed[#performed].InputSelector.title == "Loading seshy", "cold provider did not display immediately")
 assert(#argv == 0, "cold provider blocked the keypress on a child process")
 local cancelled = performed[#performed].InputSelector
@@ -565,12 +565,12 @@ cancelled.action(launch_window, pane, nil)
 local before = #performed
 deliver_callback(valid_catalog)
 assert(#performed == before, "cancelled provider loading reopened its selector")
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 launcher.cancel(launch_window)
 before = #performed
 deliver_callback(valid_catalog)
 assert(#performed == before, "returning to the tree allowed an old provider to reopen")
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 local previous_active_pane = launch_window.active_pane
 launch_window.active_pane = function()
   return {
@@ -583,7 +583,7 @@ before = #performed
 deliver_callback(valid_catalog)
 assert(#performed == before, "provider loading replaced another overlay")
 launch_window.active_pane = previous_active_pane
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 local obsolete_callback = deliver_callback
 launcher.open(launch_window, pane, "%")
 before = #performed
@@ -592,7 +592,7 @@ assert(#performed == before, "an old provider response replaced the current pick
 deliver_callback(valid_catalog)
 assert(performed[#performed].InputSelector.title == "Sessions")
 cached_catalog = valid_catalog
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 local picker = performed[#performed].InputSelector
 assert(picker.title == "Sessions" and #picker.choices == 2, "advertised creation is missing")
 assert(picker.choices[1].id == "review", "creation replaced the default existing-session selection")
@@ -601,7 +601,7 @@ picker.action(launch_window, pane, "review")
 local opened = performed[#performed].SwitchToWorkspace
 assert(opened.spawn.cwd == "/work/a b" and opened.spawn.domain.DomainName == "local")
 assert(argv[1][3] == "picker.open" and argv[1][4] == "review", "provider ID did not stay one argument")
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 picker = performed[#performed].InputSelector
 picker.action(launch_window, pane, picker.choices[#picker.choices].id)
 local prompt = performed[#performed].PromptInputLine
@@ -616,15 +616,15 @@ prompt.action(launch_window, pane, "new session")
 assert(argv[#argv][3] == "picker.create" and argv[#argv][4] == "new session")
 assert(performed[#performed].SwitchToWorkspace.spawn.set_environment_variables.WEZTERM_PICKER_SHELL == '["nu"]')
 valid_catalog.can_create = false
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 assert(#performed[#performed].InputSelector.choices == 1, "unadvertised creation was offered")
 for _, malformed in ipairs({ false, { id = "x", segments = { false } }, { id = "x", segments = "bad" } }) do
   cached_catalog = { descriptor = valid_catalog.descriptor, listed = { items = { malformed } } }
-  launcher.open(launch_window, pane, "#")
+  launcher.open(launch_window, pane, "$")
   assert(notices[#notices] == "Provider returned an invalid or duplicate item")
 end
 cached_catalog = { descriptor = { title = false, icon = {} }, listed = { items = {} } }
-launcher.open(launch_window, pane, "#")
+launcher.open(launch_window, pane, "$")
 assert(notices[#notices] == "Provider returned an invalid description")
 before = #argv
 launcher.open(launch_window, pane, "!")
