@@ -1,6 +1,6 @@
 local wezterm = require("wezterm")
 package.path = assert(os.getenv("SYSINIT_WEZTERM_LUA")) .. "/?.lua;" .. package.path
-local catalog = require("sysinit.pkg.ui.catalog")
+local catalog = require("session_tree.catalog")
 local value = { descriptor = { title = "Sessions", icon = "md_layers" }, listed = { items = {} }, can_create = true }
 wezterm.GLOBAL["picker_catalog:v2:/runner\0/manifest"] = {
   catalog_json = wezterm.json_encode(value),

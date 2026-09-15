@@ -81,48 +81,15 @@ end)()
 
 local COMMON_MODS = { "CTRL", "SUPER" }
 
-local function create_smart_keybind(key, mods, wezterm_action, opts)
-  return {
-    key = key,
-    mods = mods,
-    action = wezterm.action_callback(function(win, pane)
-      if M.locked_mode then
-        win:perform_action({ SendKey = { key = key, mods = mods } }, pane)
-        return
-      end
-
-      if opts and opts.passthrough then
-        if opts.passthrough_nvim ~= false and pane:get_user_vars().IS_NVIM == "true" then
-          win:perform_action({ SendKey = { key = key, mods = mods } }, pane)
-          return
-        end
-
-        local proc = utils.get_process_name(pane)
-        local app = pane:get_user_vars().SYSINIT_APP
-        if app and app ~= "" and pane:is_alt_screen_active() then
-          proc = app
-        end
-        for _, p in ipairs(opts.passthrough) do
-          if proc == p then
-            win:perform_action({ SendKey = { key = key, mods = mods } }, pane)
-            return
-          end
-        end
-      end
-
-      local action = wezterm_action
-      if type(action) == "function" then
-        local err
-        action, err = action(pane)
-        if not action then
-          win:toast_notification("WezTerm", err, nil, 5000)
-          return
-        end
-      end
-      win:perform_action(action, pane)
-    end),
-  }
-end
+local smart_keys = require("smart_keys_plugin")
+smart_keys.apply_to_config({}, {
+  locked = function()
+    return M.locked_mode
+  end,
+  process_name = utils.get_process_name,
+  app_user_var = "SYSINIT_APP",
+})
+local create_smart_keybind = smart_keys.binding
 
 local function create_multi_mod_bindings(key, action_fn, mod_list, opts)
   local bindings = {}

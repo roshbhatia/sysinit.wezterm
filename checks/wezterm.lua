@@ -1,7 +1,7 @@
 local lua_root = assert(arg[1], "WezTerm Lua path is required")
 local plugin_fixture = assert(arg[2], "plugin fixture path is required")
 
-local switcher_file = assert(io.open(lua_root .. "/sysinit/pkg/ui/switcher.lua", "r"))
+local switcher_file = assert(io.open(lua_root .. "/session_tree/switcher.lua", "r"))
 local switcher_source = switcher_file:read("*a")
 switcher_file:close()
 local ui_file = assert(io.open(lua_root .. "/sysinit/pkg/ui.lua", "r"))
@@ -351,7 +351,18 @@ assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app 
 
 pane_vars = {}
 
-local selector = require("sysinit.pkg.ui.switcher").session_selector_options({
+require("session_tree.options").configure({
+  picker = require("sysinit.pkg.utils").load_json_file("config.json").picker,
+  shell = require("sysinit.pkg.utils").load_json_file("config.json").shell,
+  home = "/nonexistent",
+  binding = { key = "s", mods = "SUPER" },
+  adapters = {
+    format = require("sysinit.pkg.ui.format"),
+    panes = require("sysinit.pkg.ui.panes"),
+    badges = require("sysinit.pkg.ui.badges"),
+  },
+})
+local selector = require("session_tree.switcher").session_selector_options({
   { id = "ws:newest", label = "newest" },
   { id = "ws:older", label = "older" },
 }, "open")
@@ -362,13 +373,13 @@ assert(not selector.alphabet:find("k", 1, true), "k selects a row instead of mov
 assert(not selector.alphabet:find("x", 1, true), "x selects a row after the close action moved out of the picker")
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
 assert(
-  require("sysinit.pkg.ui.switcher").session_tree_description()
+  require("session_tree.switcher").session_tree_description()
     == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
 local cached_catalog, delivered_catalog, deliver_callback
-package.loaded["sysinit.pkg.ui.catalog"] = {
+package.loaded["session_tree.catalog"] = {
   peek = function()
     return cached_catalog
   end,
@@ -378,10 +389,10 @@ package.loaded["sysinit.pkg.ui.catalog"] = {
     end
   end,
 }
-package.loaded["sysinit.pkg.ui.launcher"] = nil
-package.loaded["sysinit.pkg.ui.switcher"] = nil
+package.loaded["session_tree.launcher"] = nil
+package.loaded["session_tree.switcher"] = nil
 local session_config = {}
-local switcher = require("sysinit.pkg.ui.switcher")
+local switcher = require("session_tree.switcher")
 switcher.setup(session_config, { apply_to_config = function() end }, {
   sessions = function()
     return {}, {}
@@ -396,7 +407,7 @@ switcher.setup(session_config, { apply_to_config = function() end }, {
   home = "/home/test",
 })
 local session_keys = {}
-for _, binding in ipairs(session_config.key_tables.sysinit_session_tree) do
+for _, binding in ipairs(session_config.key_tables.session_tree_selector) do
   session_keys[binding.key] = binding
 end
 assert(
@@ -426,20 +437,20 @@ session_keys["/"].action(tree_window, pane)
 assert(#tree_actions == 2, "slash did not leave the session action table")
 assert(tree_actions[2].SendKey.key == "/", "slash did not enter the native filter")
 
-local original_rows = package.loaded["sysinit.pkg.ui.tree_rows"]
-package.loaded["sysinit.pkg.ui.tree_rows"] = {
+local original_rows = package.loaded["session_tree.tree_rows"]
+package.loaded["session_tree.tree_rows"] = {
   new = function()
     return function()
       return { { id = "ws:default", label = "default" } }
     end
   end,
 }
-local launcher_module = require("sysinit.pkg.ui.launcher")
+local launcher_module = require("session_tree.launcher")
 local original_open = launcher_module.open
 local launched
 launcher_module.open = function(_, _, key, before_show)
   launched = key
-  assert(active_tree_table == "sysinit_session_tree", "provider loading dismissed the tree")
+  assert(active_tree_table == "session_tree_selector", "provider loading dismissed the tree")
   before_show()
 end
 local context = {
@@ -471,7 +482,7 @@ for _, shortcut in ipairs({ "!", "@", "#", "$", "%" }) do
     end
   end
   assert(#tree_actions == before_repeat, "repeated opening stacked a persistent key table")
-  for _, binding in ipairs(second_config.key_tables.sysinit_session_tree) do
+  for _, binding in ipairs(second_config.key_tables.session_tree_selector) do
     if binding.key == shortcut then
       binding.action(tree_window, pane)
     end
@@ -484,14 +495,14 @@ for _, shortcut in ipairs({ "!", "@", "#", "$", "%" }) do
   assert(wezterm.GLOBAL["session_tree_action:7"] == nil, "a completed provider action remained pending")
 end
 launcher_module.open = original_open
-package.loaded["sysinit.pkg.ui.tree_rows"] = original_rows
+package.loaded["session_tree.tree_rows"] = original_rows
 
 local refreshed
 local switch_actions = {}
 local function last_switch()
   return switch_actions[#switch_actions]
 end
-local session_actions = require("sysinit.pkg.ui.actions")
+local session_actions = require("session_tree.actions")
 session_actions.set_refresh_handler(function(target)
   refreshed = target
 end)
@@ -508,8 +519,8 @@ assert(last_switch().SwitchToWorkspace.name == "newest", "session switch did not
 assert(last_switch().SwitchToWorkspace.spawn == nil, "a switch with no row invented a spawn")
 assert(refreshed == switch_window, "session switch did not refresh the active session indicator")
 
-local launcher = require("sysinit.pkg.ui.launcher")
-local ui_sessions = require("sysinit.pkg.ui.sessions")
+local launcher = require("session_tree.launcher")
+local ui_sessions = require("session_tree.sessions")
 local function mux_window(name, id)
   return {
     get_workspace = function()
@@ -532,7 +543,7 @@ child_process = function()
   calls = calls + 1
   error("unexpected process")
 end
-local tree = require("sysinit.pkg.ui.session_tree").build({})
+local tree = require("session_tree.session_tree").build({})
 assert(#tree.workspaces == 2 and calls == 0, "tree discovery must read only the mux")
 assert(tree.sections == nil, "directory catalogs leaked into the live tree")
 
@@ -686,7 +697,7 @@ local ribbon = {
     }
   end,
 }
-local rows = require("sysinit.pkg.ui.tree_rows").new({ ribbon = ribbon, icons = { session = "W" } })
+local rows = require("session_tree.tree_rows").new({ ribbon = ribbon, icons = { session = "W" } })
 local targets = {}
 local choices = rows(tree, targets, "all", {})
 assert(#choices == 2 and targets["ws:alpha"] and targets["ws:remote:alpha"], "live tree rendering lost a workspace")

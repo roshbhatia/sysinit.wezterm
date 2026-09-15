@@ -1,4 +1,9 @@
 {
+  session-tree,
+  spawn,
+  smart-keys,
+}:
+{
   config,
   lib,
   pkgs,
@@ -6,10 +11,18 @@
 }:
 let
   cfg = config.programs.sysinit-wezterm;
+  luaSource = import ./lua-source.nix {
+    inherit
+      pkgs
+      session-tree
+      spawn
+      smart-keys
+      ;
+  };
   runner = pkgs.writeShellApplication {
     name = "wezterm-picker-call";
     text = ''
-      exec ${pkgs.python3}/bin/python3 ${./scripts/picker-call.py} "$@"
+      exec ${pkgs.python3}/bin/python3 ${session-tree}/scripts/picker-call.py "$@"
     '';
   };
 in
@@ -31,7 +44,7 @@ in
       enableZshIntegration = true;
       enableBashIntegration = true;
       extraConfig = ''
-        package.path = package.path .. ";${./lua}/?.lua;${./lua}/?/init.lua"
+        package.path = package.path .. ";${luaSource}/?.lua;${luaSource}/?/init.lua"
         return require("sysinit.pkg.bootstrap").build()
       '';
     };

@@ -18,7 +18,70 @@
     },
     "root": {
       "inputs": {
-        "nixpkgs": "nixpkgs"
+        "nixpkgs": "nixpkgs",
+        "session-tree": "session-tree",
+        "smart-keys": "smart-keys",
+        "spawn": "spawn"
+      }
+    },
+    "session-tree": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789493115,
+        "narHash": "sha256-2zsnFGypx6fA6xp9A6NqbfEFatBzjtvoHcd6r/xFgPs=",
+        "owner": "roshbhatia",
+        "repo": "session-tree.wezterm",
+        "rev": "d0af36be54150a4794b2b37611109352b37d6bfb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "roshbhatia",
+        "repo": "session-tree.wezterm",
+        "type": "github"
+      }
+    },
+    "smart-keys": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789492989,
+        "narHash": "sha256-Bq/6zi/REiPMWmygJY2uczLtSjUfub1bfXKxxFSwi1I=",
+        "owner": "roshbhatia",
+        "repo": "smart-keys.wezterm",
+        "rev": "42aab43f90e054605d12ce7ec2f85aacbf7c73cd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "roshbhatia",
+        "repo": "smart-keys.wezterm",
+        "type": "github"
+      }
+    },
+    "spawn": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1789492997,
+        "narHash": "sha256-Y9zCuIbjroOb1/aFECQGLB+cnaJ7/CEwkV4ZTkigKhs=",
+        "owner": "roshbhatia",
+        "repo": "spawn.wezterm",
+        "rev": "40bc0198a0689fe08adad9da4531a62c380135a8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "roshbhatia",
+        "repo": "spawn.wezterm",
+        "type": "github"
       }
     }
   },

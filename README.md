@@ -1,6 +1,16 @@
 # sysinit.wezterm
 
-WezTerm configuration with a live session tree and separate provider pickers.
+WezTerm configuration composed from standalone plugins and pinned upstream integrations.
+
+- [session-tree.wezterm](https://github.com/roshbhatia/session-tree.wezterm) owns the live tree and provider runner.
+- [spawn.wezterm](https://github.com/roshbhatia/spawn.wezterm) owns host-aware spawn actions and the `wezspawn` CLI.
+- [smart-keys.wezterm](https://github.com/roshbhatia/smart-keys.wezterm) owns application passthrough and the navigation boundary callback.
+
+This repository owns the theme, key assignments, agent adapters, Nix module, and Zmx/zoxide provider packages.
+Each plugin also supports plain Lua installation without this configuration.
+
+`lib.luaSource pkgs` returns the assembled Lua source, including pinned plugin modules.
+`packages.<system>.wezspawn` remains a compatibility alias for spawn.wezterm's CLI.
 The tree shows running workspaces, tabs, and panes.
 Provider shortcuts open another selector without adding inactive entries to the tree.
 

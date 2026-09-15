@@ -1,8 +1,20 @@
 {
   description = "WezTerm live tree and provider picker";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm";
+  inputs.session-tree.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.spawn.url = "github:roshbhatia/spawn.wezterm";
+  inputs.spawn.inputs.nixpkgs.follows = "nixpkgs";
+  inputs.smart-keys.url = "github:roshbhatia/smart-keys.wezterm";
+  inputs.smart-keys.inputs.nixpkgs.follows = "nixpkgs";
   outputs =
-    { self, nixpkgs }:
+    {
+      self,
+      nixpkgs,
+      session-tree,
+      spawn,
+      smart-keys,
+    }:
     let
       systems = [
         "aarch64-darwin"
@@ -10,31 +22,28 @@
         "x86_64-linux"
       ];
       each = nixpkgs.lib.genAttrs systems;
+      luaFor =
+        pkgs:
+        import ./lua-source.nix {
+          inherit
+            pkgs
+            session-tree
+            spawn
+            smart-keys
+            ;
+        };
+      module = import ./module.nix { inherit session-tree spawn smart-keys; };
     in
     {
-      homeManagerModules.default = import ./module.nix;
-      lib.luaSource = ./lua;
+      homeManagerModules.default = module;
+      lib.luaSource = luaFor;
       packages = each (
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          wezspawn = pkgs.buildGoModule {
-            pname = "wezspawn";
-            version = "0.1.0";
-            src = pkgs.lib.fileset.toSource {
-              root = ./.;
-              fileset = pkgs.lib.fileset.unions [
-                ./go.mod
-                ./cmd
-                ./internal
-              ];
-            };
-            vendorHash = null;
-            subPackages = [ "cmd/wezspawn" ];
-            meta.mainProgram = "wezspawn";
-          };
+          wezspawn = spawn.packages.${system}.wezspawn;
           provider-zoxide = import ./extras/zoxide {
             inherit pkgs;
             core = pkgs.zoxide;
@@ -58,7 +67,7 @@
               self.packages.${system}.wezspawn
             ];
           };
-          default = pkgs.runCommand "sysinit-wezterm" { } "mkdir -p $out; cp -r ${./lua} $out/lua";
+          default = pkgs.runCommand "sysinit-wezterm" { } "mkdir -p $out; cp -r ${luaFor pkgs} $out/lua";
         }
       );
       devShells = each (
@@ -105,7 +114,7 @@
         let
           pkgs = nixpkgs.legacyPackages.${system};
           standalone =
-            (import ./module.nix {
+            (module {
               inherit pkgs;
               lib = nixpkgs.lib;
               config = {
@@ -135,12 +144,12 @@
                     cp ${
                       pkgs.writeText "env.json" standalone.xdg.configFile."wezterm/env.json".text
                     } "$XDG_CONFIG_HOME/wezterm/env.json"
-                    SYSINIT_WEZTERM_LUA=${./lua} WEZTERM_TEST_RESULT="$TMPDIR/tab-passed" wezterm --config-file ${./checks/wezterm-entry.lua} show-keys --lua > keys.lua 2> startup.log
+                    SYSINIT_WEZTERM_LUA=${luaFor pkgs} WEZTERM_TEST_RESULT="$TMPDIR/tab-passed" wezterm --config-file ${./checks/wezterm-entry.lua} show-keys --lua > keys.lua 2> startup.log
                     cat startup.log
                     test "$(cat "$TMPDIR/tab-passed")" = passed
                 if grep -E 'setup failed|Failed to load|No pinned dependency|ERROR|Error|Cloned https' startup.log; then exit 1; fi
                     test "$(grep -c '^    { key =' keys.lua)" -ge 80
-                    SYSINIT_WEZTERM_LUA=${./lua} PICKER_TEST_MARKER="$TMPDIR/picker-passed" wezterm --config-file ${./checks/picker_global.lua} show-keys --lua > /dev/null 2> picker.log
+                    SYSINIT_WEZTERM_LUA=${luaFor pkgs} PICKER_TEST_MARKER="$TMPDIR/picker-passed" wezterm --config-file ${./checks/picker_global.lua} show-keys --lua > /dev/null 2> picker.log
                     cat picker.log
                     test "$(cat "$TMPDIR/picker-passed")" = passed
                     touch $out
@@ -156,8 +165,8 @@
               }
               ''
                 export HOME="$TMPDIR"
-                lua ${./checks/wezterm.lua} ${./lua} ${./checks/fixtures/wezterm-plugin}
-                lua ${./checks/picker_catalog.lua} ${./lua}
+                lua ${./checks/wezterm.lua} ${luaFor pkgs} ${./checks/fixtures/wezterm-plugin}
+                lua ${./checks/picker_catalog.lua} ${luaFor pkgs}
                 cd ${self}
                 uv run --offline --no-project --no-managed-python --python ${pkgs.python3}/bin/python3 -m unittest discover -s checks -p 'test_*.py'
                 touch $out

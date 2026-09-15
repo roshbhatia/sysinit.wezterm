@@ -25,7 +25,7 @@ local wezterm = {
   },
 }
 package.loaded.wezterm = wezterm
-local catalog = require("sysinit.pkg.ui.catalog")
+local catalog = require("session_tree.catalog")
 local runner = { "/runner with spaces" }
 local result = { descriptor = { title = "Sessions", icon = "" }, listed = { items = {} }, can_create = true }
 local function tick()
@@ -55,8 +55,8 @@ finish(1, "success", { ok = true, catalog = result })
 tick()
 assert(delivered == result and catalog.peek(runner, "/manifest with spaces") == result)
 assert(io.open(started[1][4], "r") == nil, "completed job leaked its file")
-package.loaded["sysinit.pkg.ui.catalog"] = nil
-catalog = require("sysinit.pkg.ui.catalog")
+package.loaded["session_tree.catalog"] = nil
+catalog = require("session_tree.catalog")
 catalog.load(runner, "/manifest with spaces", function(value)
   assert(value == result)
 end)

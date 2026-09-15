@@ -34,6 +34,24 @@ function M.build()
     config = wezterm.config_builder()
   end
 
+  local utils = require("sysinit.pkg.utils")
+  local settings = utils.load_json_file(utils.get_config_path("config.json"))
+  require("spawn_plugin").apply_to_config(config, settings.spawn or {})
+  require("session_tree.options").configure({
+    picker = settings.picker,
+    shell = settings.shell,
+    home = utils.get_home_dir(),
+    binding = { key = "s", mods = "SUPER" },
+    locked = function()
+      return require("sysinit.pkg.keybindings").locked_mode
+    end,
+    workspace_state_dir = utils.state_path("weztermWorkspaceState", "wezterm/workspace_state"),
+    adapters = {
+      format = require("sysinit.pkg.ui.format"),
+      panes = require("sysinit.pkg.ui.panes"),
+      badges = require("sysinit.pkg.ui.badges"),
+    },
+  })
   require("sysinit.pkg.core").setup(config)
 
   local failures = {}
