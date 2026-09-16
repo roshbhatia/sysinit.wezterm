@@ -15,7 +15,11 @@ local function read_known_hosts_hosts()
       local first = line:match("^(%S+)")
       if first then
         for token in first:gmatch("[^,]+") do
-          local host = token:match("^%[([^%]]+)%]") or token
+          local address, port = token:match("^%[([^%]]+)%]:(%d+)$")
+          local host = token
+          if address then
+            host = address:find(":", 1, true) and ("[" .. address .. "]:" .. port) or (address .. ":" .. port)
+          end
           if host ~= "" and not host:match("[*?]") and not seen[host] then
             seen[host] = true
             table.insert(hosts, host)
@@ -46,16 +50,6 @@ local function ssh_key_options()
     opts.identityagent = agent
     opts.identitiesonly = "no"
   end
-  local home = utils.get_home_dir()
-  for _, name in ipairs({ "id_ed25519", "id_ecdsa", "id_rsa" }) do
-    local path = home .. "/.ssh/" .. name
-    local fh = io.open(path, "r")
-    if fh then
-      fh:close()
-      opts.identityfile = path
-      break
-    end
-  end
   return opts
 end
 
@@ -65,18 +59,27 @@ function M.ssh()
   local seen = {}
   local resolved_hostnames = {}
 
-  local function add(host)
+  local function add(host, cfg)
     host = host:lower()
-    if host == "" or host:match("[*?]") or seen[host] or resolved_hostnames[host] then
+    if host == "" or host:match("[*?]") or seen[host] then
       return
     end
     seen[host] = true
+    local options = {}
+    for key, value in pairs(key_options) do
+      options[key] = value
+    end
+    for _, key in ipairs({ "identityagent", "identityfile", "identitiesonly" }) do
+      if type(cfg) == "table" and cfg[key] then
+        options[key] = cfg[key]
+      end
+    end
     table.insert(domains, {
       name = "ssh:" .. host,
       remote_address = host,
       multiplexing = "WezTerm",
       assume_shell = "Posix",
-      ssh_option = key_options,
+      ssh_option = options,
     })
   end
 
@@ -87,14 +90,19 @@ function M.ssh()
         if type(cfg) == "table" and cfg.hostname then
           resolved_hostnames[cfg.hostname:lower()] = true
         end
-        add(host)
+        add(host, cfg)
       end
     end
   end
 
   for _, host in ipairs(read_known_hosts_hosts()) do
-    add(host)
+    if not resolved_hostnames[host:lower()] then
+      add(host)
+    end
   end
+  table.sort(domains, function(a, b)
+    return a.name < b.name
+  end)
 
   return domains
 end
