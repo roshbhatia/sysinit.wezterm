@@ -353,6 +353,7 @@ pane_vars = {}
 
 require("session_tree.options").configure({
   picker = require("sysinit.pkg.utils").load_json_file("config.json").picker,
+  passthrough_procs = require("sysinit.pkg.utils").load_json_file("config.json").passthrough_procs,
   shell = require("sysinit.pkg.utils").load_json_file("config.json").shell,
   home = "/nonexistent",
   binding = { key = "s", mods = "SUPER" },
@@ -682,6 +683,31 @@ assert(ui_format.smart_path("/state/seshy/sessions/alpha") == "{sy}/alpha", "a c
 assert(ui_format.smart_path("/state/seshy/sessions") == "{sy}", "an alias did not abbreviate its own directory")
 assert(ui_format.smart_path("/state/seshy/sessionsx") == "/state/seshy/sessionsx", "an alias matched a sibling prefix")
 assert(ui_format.is_passthrough("zmx") and not ui_format.is_passthrough("nvim"), "passthrough config was ignored")
+
+local opaque = "1vck9ziv21pzp08093vb3nk4634nk760miia5116w45c2ncp4vqc"
+local transient_pane = {
+  get_foreground_process_name = function()
+    return "/tmp/" .. opaque
+  end,
+  get_title = function()
+    return opaque
+  end,
+}
+local transient_tab = {
+  get_title = function()
+    return opaque
+  end,
+}
+local configured_format = require("session_tree.adapters").format
+assert(configured_format.pane_proc(transient_pane, "claude") == "claude")
+assert(configured_format.pane_proc(transient_pane) == "")
+assert(configured_format.tab_label(transient_tab, 1, transient_pane, "claude") == "claude")
+assert(configured_format.tab_label(transient_tab, 1, transient_pane) == "tab 1")
+assert(ui_format.normalize_proc(opaque) == "")
+transient_tab.get_title = function()
+  return "release notes"
+end
+assert(configured_format.tab_label(transient_tab, 1, transient_pane, "claude") == "release notes")
 
 local ribbon = {
   new = function()

@@ -1,5 +1,6 @@
 local wezterm = require("wezterm")
 local utils = require("sysinit.pkg.utils")
+local session_format = require("session_tree.format")
 
 local nf = wezterm.nerdfonts or {}
 
@@ -101,10 +102,6 @@ end
 -- `{work}` and anything under it as `{work}/rest`. Longest path wins, so a
 -- nested alias beats the one that contains it.
 M.cwd_aliases = {}
--- Processes that only wrap another one, so a pane running one shows the
--- process inside it. Named in config.json, not here: which multiplexer a host
--- runs is not this module's to know.
-local passthrough_procs = {}
 do
   local ok, cfg = pcall(utils.load_json_file, utils.get_config_path("config.json"))
   if ok and type(cfg) == "table" then
@@ -120,13 +117,6 @@ do
         end
         return a.alias < b.alias
       end)
-    end
-    if type(cfg.passthrough_procs) == "table" then
-      for _, name in ipairs(cfg.passthrough_procs) do
-        if type(name) == "string" and name ~= "" then
-          passthrough_procs[name:lower()] = true
-        end
-      end
     end
   end
 end
@@ -159,87 +149,9 @@ function M.smart_path(full_cwd)
   return full_cwd
 end
 
-function M.normalize_proc(raw)
-  if not raw or raw == "" then
-    return raw
-  end
-  return (raw:gsub("^%.", ""):gsub("%-wrapped$", ""))
-end
-
----@param name string|nil
----@return boolean
-function M.is_passthrough(name)
-  if type(name) ~= "string" or name == "" then
-    return false
-  end
-  return passthrough_procs[M.normalize_proc(name):lower()] == true
-end
-
-local function deepest_proc_name(info, depth)
-  if depth <= 0 or type(info) ~= "table" then
-    return nil
-  end
-  local best_pid, best_child = nil, nil
-  for pid, child in pairs(info.children or {}) do
-    if type(pid) == "number" and (best_pid == nil or pid > best_pid) then
-      best_pid, best_child = pid, child
-    end
-  end
-  if best_child == nil then
-    local name = info.name
-    if type(name) ~= "string" or name == "" then
-      return nil
-    end
-    return M.normalize_proc((name:gsub("^%-", "")))
-  end
-  return deepest_proc_name(best_child, depth - 1)
-end
-
-function M.pane_proc(p, agent)
-  local ok, proc_name = pcall(function()
-    local proc = p:get_foreground_process_name()
-    if proc and proc ~= "" then
-      return M.normalize_proc((proc:gsub("/+$", "")):match("([^/]+)$") or "")
-    end
-    return nil
-  end)
-  if ok and proc_name and proc_name ~= "" and passthrough_procs[proc_name] then
-    local ok_info, inner = pcall(function()
-      return deepest_proc_name(p:get_foreground_process_info(), 8)
-    end)
-    if ok_info and inner and inner ~= "" and not passthrough_procs[inner] then
-      return inner
-    end
-  end
-  if ok and proc_name and proc_name ~= "" and not passthrough_procs[proc_name] then
-    return proc_name
-  end
-  if agent and agent ~= "" then
-    return agent
-  end
-  local ok2, title = pcall(function()
-    return M.normalize_proc(p:get_title() or "")
-  end)
-  if ok2 and title and title ~= "" and not title:find("%s") and not M.is_passthrough(title) then
-    return title
-  end
-  return ""
-end
-
-function M.tab_label(tab, index, active_pane)
-  local ok, title = pcall(function()
-    return tab:get_title() or ""
-  end)
-  if ok and title and title ~= "" and not M.is_passthrough(title) then
-    return title
-  end
-  if active_pane then
-    local proc = M.pane_proc(active_pane, nil)
-    if proc ~= "" then
-      return proc
-    end
-  end
-  return "tab " .. tostring(index)
-end
+M.normalize_proc = session_format.normalize_proc
+M.is_passthrough = session_format.is_passthrough
+M.pane_proc = session_format.pane_proc
+M.tab_label = session_format.tab_label
 
 return M

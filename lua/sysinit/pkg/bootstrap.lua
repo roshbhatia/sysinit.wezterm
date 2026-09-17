@@ -39,6 +39,7 @@ function M.build()
   require("spawn_plugin").apply_to_config(config, settings.spawn or {})
   require("session_tree.options").configure({
     picker = settings.picker,
+    passthrough_procs = settings.passthrough_procs,
     shell = settings.shell,
     home = utils.get_home_dir(),
     binding = { key = "s", mods = "SUPER" },
