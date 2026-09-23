@@ -47,7 +47,7 @@ def respond(request):
             raise FileNotFoundError("env executable is unavailable")
         return {
             "kind": "spawn", "label": name, "cwd": str(Path.home()),
-            "command": [env, "-u", "ZMX_SESSION", CORE, "attach", name],
+            "command": [env, "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", CORE, "attach", name],
             "environment": {},
         }
     raise ValueError("unsupported capability: " + capability)

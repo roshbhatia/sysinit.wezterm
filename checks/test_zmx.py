@@ -27,7 +27,7 @@ class ZmxTest(unittest.TestCase):
     def test_attach_unsets_inherited_session(self, run, _which):
         run.return_value.stdout = "review build\n"
         output = provider.respond(self.request("picker.open"))
-        self.assertEqual(output["command"], ["/runtime/env", "-u", "ZMX_SESSION", "/runtime/zmx", "attach", "review build"])
+        self.assertEqual(output["command"], ["/runtime/env", "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", "/runtime/zmx", "attach", "review build"])
         self.assertEqual(output["label"], "review build")
 
     @patch.object(provider.subprocess, "run")

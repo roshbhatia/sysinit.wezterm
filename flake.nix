@@ -196,7 +196,7 @@
                 done
                 request='{"version":"provider/v1","kind":"request","requestId":"smoke","capability":"picker.open","input":{"id":"wezterm-provider-test"}}'
                 printf '%s\n' "$request" | ${self.packages.${system}.provider-zmx}/bin/zmx-picker > plan.json
-                jq -e '.status == "ok" and .output.command[1:3] == ["-u","ZMX_SESSION"] and .output.command[4:6] == ["attach","wezterm-provider-test"]' plan.json
+                jq -e '.status == "ok" and .output.command[1:5] == ["-u","ZMX_SESSION","-u","ZMX_SESSION_PREFIX"] and .output.command[6:8] == ["attach","wezterm-provider-test"]' plan.json
                 touch $out
               '';
         }
