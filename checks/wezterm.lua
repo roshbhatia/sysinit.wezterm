@@ -924,6 +924,14 @@ local event_pane = {
   end,
 }
 
+event_window.mux_window = function()
+  return {
+    active_pane = function()
+      return event_pane
+    end,
+  }
+end
+
 handlers["user-var-changed"](event_window, event_pane, "wez_copy", "copied text")
 assert(clipboard.value == "copied text" and clipboard.target == "Clipboard", "wez_copy missed the clipboard")
 handlers["user-var-changed"](event_window, event_pane, "SYSINIT_NAV", "left:editor")
@@ -952,10 +960,28 @@ assert(overrides.enable_scroll_bar == nil, "the visible scroll bar did not retur
 assert(overrides.preserved, "restoring the scroll bar discarded an existing override")
 assert(get_override_calls == 3 and set_override_calls == 2, "the visible scroll bar transition was not applied once")
 
+local overlay = {
+  pane_id = function()
+    return 99
+  end,
+  get_dimensions = function()
+    return { scrollback_rows = 20, viewport_rows = 20 }
+  end,
+  is_alt_screen_active = function()
+    return false
+  end,
+}
+handlers["update-status"](event_window, overlay)
+assert(set_override_calls == 2, "a picker overlay reloaded the window and cleared its key table")
+assert(overrides.enable_scroll_bar == nil, "a picker overlay changed the terminal scroll bar")
+handlers["update-status"](event_window, event_pane)
+assert(set_override_calls == 2, "closing a picker reloaded an unchanged terminal")
+
 local second_overrides = { second_window = true }
 local second_get_calls = 0
 local second_set_calls = 0
 local second_window = {
+  mux_window = event_window.mux_window,
   window_id = function()
     return 2
   end,
@@ -979,6 +1005,7 @@ assert(second_get_calls == 1 and second_set_calls == 1, "the second window reapp
 local inherited_overrides = { enable_scroll_bar = false, external = "kept" }
 local inherited_sets = 0
 local inherited_window = {
+  mux_window = event_window.mux_window,
   window_id = function()
     return 3
   end,

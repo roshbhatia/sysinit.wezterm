@@ -28,10 +28,15 @@ function M.setup(config)
   local scrollbar_state = {}
   wezterm.on("update-status", function(window, pane)
     local ok, scrollable = pcall(function()
+      local active = window:mux_window():active_pane()
+      -- Config overrides clear key tables, so overlays must not change the scroll bar.
+      if not active or active:pane_id() ~= pane:pane_id() then
+        return nil
+      end
       local dimensions = pane:get_dimensions()
       return dimensions.scrollback_rows > dimensions.viewport_rows and not pane:is_alt_screen_active()
     end)
-    if not ok then
+    if not ok or scrollable == nil then
       -- A closed pane can remain in a queued update-status event. Returning
       -- lets later status handlers refresh the active workspace and tab line.
       return
