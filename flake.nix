@@ -170,6 +170,7 @@
                 printf '%s\n' '[port-host]:2222 ssh-ed25519 fixture' '[::1]:2200 ssh-ed25519 fixture' 'other ssh-ed25519 fixture' > "$TMPDIR/ssh-home/.ssh/known_hosts"
                 lua ${./checks/composition.lua} ${luaFor pkgs} "$TMPDIR/ssh-home"
                 lua ${./checks/picker_catalog.lua} ${luaFor pkgs}
+                lua ${./checks/activity.lua} ${luaFor pkgs}
                 cd ${self}
                 uv run --offline --no-project --no-managed-python --python ${pkgs.python3}/bin/python3 -m unittest discover -s checks -p 'test_*.py'
                 touch $out

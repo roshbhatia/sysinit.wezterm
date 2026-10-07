@@ -1,5 +1,6 @@
 local wezterm = require("wezterm")
 local utils = require("sysinit.pkg.utils")
+local activity = require("sysinit.pkg.ui.activity")
 
 local M = {}
 
@@ -8,6 +9,7 @@ M.state_rank = {
   working = 3,
   done = 2,
   idle = 1,
+  unknown = 0,
 }
 
 function M.pane_domain(p)
@@ -75,19 +77,31 @@ function M.read_pane_record(pane_id)
   }
 end
 
--- The OSC user var and the pane record carry the same four fields over two
--- channels. Only the record survives a VT that does not forward OSC (a remote
--- multiplexer, or any ssh mux), so the fresher of the two wins rather than the
--- user var always.
----@return string|nil status
----@return string reason
----@return number|nil since
----@return string|nil agent
----@return string source one of "record", "uservar", "screen", "deck", or ""
----@param record table|false|nil pass the already-read record, false for none, nil to read here
-function M.agent_state(p, deck_states, record)
-  local status, reason, since, agent, source
+local agents = {}
+local history = {}
 
+function M.latest(id)
+  return history[id] and history[id].status
+end
+
+function M.configure(specs)
+  agents = specs or {}
+  history = {}
+end
+
+function M.forget_missing(present)
+  for id in pairs(history) do
+    if not present[id] then
+      history[id] = nil
+    end
+  end
+end
+
+function M.agent_state(p, deck_states, record, now)
+  now = now or os.time()
+  local id = p.pane_id and p:pane_id() or p
+  local previous = history[id] or {}
+  local status, reason, since, agent, source
   local uv = p:get_user_vars()
   local raw = uv and uv.agent_state
   if raw and raw ~= "" then
@@ -96,34 +110,64 @@ function M.agent_state(p, deck_states, record)
       status, reason, since, agent, source = s, r, tonumber(ts), a, "uservar"
     end
   end
-
   if record == nil then
-    record = M.read_pane_record(p:pane_id())
+    record = M.read_pane_record(id)
   end
   if record and record.status and (since == nil or (record.since or 0) > since) then
     status, reason, since, agent, source = record.status, record.reason, record.since, record.agent, "record"
   end
-
-  if agent == "codex" and (status == "done" or status == "idle") then
-    local ok, text = pcall(function()
-      return p:get_lines_as_text(12)
-    end)
-    if ok and type(text) == "string" then
-      for line in text:gmatch("[^\n]+") do
-        if line:match("^%s*• Working %(.-esc to interrupt%)") then
-          return "working", "active turn", nil, agent, "screen"
-        end
-      end
+  local token = table.concat({ agent or "", status or "", tostring(since or ""), reason or "" }, "|")
+  local live_agent, owner, observable = activity.process(p, agents)
+  if observable and not live_agent then
+    history[id] = { rejected = token, owner = false }
+    return nil
+  end
+  if previous.owner ~= nil and owner and owner ~= previous.owner then
+    previous = { rejected = previous.token or previous.rejected }
+  end
+  if live_agent and agent ~= live_agent then
+    status, reason, since, agent, source = nil, nil, nil, live_agent, nil
+  elseif token == previous.rejected or (since and previous.since and since < previous.since) then
+    status, reason, since, agent, source =
+      previous.hook_status, previous.hook_reason, previous.since, previous.agent, previous.hook_source
+  end
+  local deck = deck_states[id]
+  agent = live_agent or agent or (deck and deck.agent)
+  if not agent then
+    return nil
+  end
+  local current = {
+    token = status and table.concat({ agent or "", status, tostring(since or ""), reason or "" }, "|") or nil,
+    rejected = previous.rejected,
+    owner = owner or previous.owner,
+    since = since,
+    agent = agent,
+    hook_status = status,
+    hook_reason = reason,
+    hook_source = source,
+  }
+  local ok, text = pcall(function()
+    return p:get_lines_as_text(20)
+  end)
+  local title_ok, title = pcall(function()
+    return p:get_title()
+  end)
+  local inferred, evidence = activity.screen(agent, ok and text or "", title_ok and title or "", agents[agent] or {})
+  if inferred == "waiting" or (inferred == "working" and status ~= "waiting" and (not status or agent == "codex")) then
+    status, reason, since, source = inferred, inferred == "waiting" and "needs input" or "active turn", nil, evidence
+  elseif not status then
+    if evidence == "transcript" then
+      status, source = previous.status or "unknown", "screen"
+    elseif inferred == "idle" and previous.status == "working" then
+      current.idle_at = previous.idle_at or now
+      status = now - current.idle_at >= 0.5 and "idle" or "working"
+      source = "screen"
+    else
+      status, source = inferred or "unknown", evidence or "screen"
     end
   end
-
-  if not status then
-    local deck = deck_states[p:pane_id()]
-    if deck and M.state_rank[deck.status] then
-      status, agent, source = deck.status, deck.agent, "deck"
-    end
-  end
-
+  current.status = status
+  history[id] = current
   return status, reason, since, agent, source or ""
 end
 

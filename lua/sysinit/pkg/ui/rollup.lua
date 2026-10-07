@@ -5,6 +5,7 @@ local M = {}
 
 function M.collect(deck_states)
   local observations = {}
+  local present = {}
   local ok = pcall(function()
     for _, win in ipairs(wezterm.mux.all_windows()) do
       local workspace = win:get_workspace()
@@ -13,6 +14,7 @@ function M.collect(deck_states)
         local tab_id = tab:tab_id()
         for _, p in ipairs(tab:panes()) do
           local pane_id = p:pane_id()
+          present[pane_id] = true
           local rec = panes_mod.read_pane_record(pane_id)
           local status, reason, since, agent, source = panes_mod.agent_state(p, deck_states, rec or false)
           if status then
@@ -44,6 +46,7 @@ function M.collect(deck_states)
   if not ok then
     return nil
   end
+  panes_mod.forget_missing(present)
   return observations
 end
 

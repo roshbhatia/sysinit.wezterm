@@ -18,6 +18,7 @@ M.state_labels = {
   done = "Done",
   working = "Working",
   idle = "",
+  unknown = "Unknown",
 }
 
 M.suppressed_reasons = { ["your move"] = true, ["submit"] = true, ["message"] = true }

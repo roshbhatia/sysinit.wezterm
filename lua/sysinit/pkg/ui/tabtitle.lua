@@ -2,6 +2,7 @@ local wezterm = require("wezterm")
 local ui_badges = require("sysinit.pkg.ui.badges")
 local ui_format = require("sysinit.pkg.ui.format")
 local ui_statusbar = require("sysinit.pkg.ui.statusbar")
+local ui_panes = require("sysinit.pkg.ui.panes")
 
 local nf = wezterm.nerdfonts or {}
 
@@ -50,12 +51,7 @@ function M.format(tab, cfg, ctx)
   r:append(nil, nil, " " .. ui_statusbar.tab_index(tab) .. " " .. label .. " ")
 
   pcall(function()
-    local uv = pane and pane.user_vars
-    local raw = uv and uv.agent_state
-    if not raw or raw == "" then
-      return
-    end
-    local s = raw:match("^([^|]*)|")
+    local s = pane and ui_panes.latest(pane.pane_id)
     local icon = s and s ~= "idle" and ui_format.state_icons[s]
     if icon then
       r:append(nil, nil, icon .. " ")

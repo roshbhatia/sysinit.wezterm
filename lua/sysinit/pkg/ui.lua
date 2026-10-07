@@ -91,6 +91,8 @@ function M.setup(config)
     return "  "
   end
 
+  require("sysinit.pkg.ui.panes").configure(config_data.agents)
+
   local agent_deck_ok, agent_deck = plugin_loader.load("agent-deck")
   if not agent_deck_ok then
     wezterm.log_warn("Failed to load agent-deck: " .. tostring(agent_deck))
