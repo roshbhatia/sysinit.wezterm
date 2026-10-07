@@ -1,0 +1,39 @@
+lua/sysinit/pkg/ui/tabtitle.lua
+  s_de281cf8e5cd4f::t_ab0ea3b5fef35e 5,54
+flake.nix
+  s_de281cf8e5cd4f::t_ab0ea3b5fef35e 173
+lua/sysinit/pkg/ui/activity.lua
+  s_de281cf8e5cd4f::t_67ddb80527b31c 109
+  s_de281cf8e5cd4f::t_8a3d52b4579cf6 11,16-18,23-24,36,42,44,58,64,66,70,77-85,91,98,103,110,115
+  s_de281cf8e5cd4f::t_8b979a9e1a2bb7 4,10,32,37,43,46-49,57,65,74-76,86-88,99,104,108,114
+lua/sysinit/pkg/ui/panes.lua
+  s_de281cf8e5cd4f::t_ab0ea3b5fef35e 83-86,90,98
+  s_de281cf8e5cd4f::t_2691ccab042e1c 128-130
+  s_de281cf8e5cd4f::t_8a3d52b4579cf6 101
+  s_de281cf8e5cd4f::t_d00deab79412a5 140-142
+  s_de281cf8e5cd4f::t_3fa62fbf49cfd2 126
+checks/activity.lua
+  s_de281cf8e5cd4f::t_0e4e0c57b5933b 1-99
+lua/sysinit/pkg/ui.lua
+  s_de281cf8e5cd4f::t_9a9c81fa8dd697 94-95
+lua/sysinit/pkg/ui/format.lua
+  s_de281cf8e5cd4f::t_82be7e246ac459 21
+lua/sysinit/pkg/ui/rollup.lua
+  s_de281cf8e5cd4f::t_2634c3f2d028d5 8,17,49
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4836d1085ce944e5c7d9e8a11e3a16446c4d9b0f",
+  "prompts": {},
+  "sessions": {
+    "s_de281cf8e5cd4f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a11307-12eb-7480-afb6-c32a40ba7deb",
+        "model": "gpt-6-astra"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
