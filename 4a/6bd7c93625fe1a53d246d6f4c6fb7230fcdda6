@@ -1,0 +1,21 @@
+lua/sysinit/pkg/bootstrap.lua
+  s_00f0f53292bea7::t_0e39e65f0663f0 40-55,59
+lua/sysinit/pkg/keybindings.lua
+  s_00f0f53292bea7::t_aca22ddef28f05 373,376-384
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "4a6bd7c93625fe1a53d246d6f4c6fb7230fcdda6",
+  "prompts": {},
+  "sessions": {
+    "s_00f0f53292bea7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1933c-a6e8-7442-97c4-87ca5f511b94",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
