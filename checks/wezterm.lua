@@ -43,6 +43,7 @@ local json_parse = function(text)
   error("no json_parse stub for: " .. tostring(text))
 end
 local logged = {}
+local tmuxMode = false
 -- The mux the tree walks and the panes it can activate; each test sets them.
 local mux_windows = {}
 local mux_panes = {}
@@ -161,6 +162,7 @@ package.loaded["sysinit.pkg.utils"] = {
   end,
   load_json_file = function(path)
     return {
+      terminalMode = tmuxMode and "tmux" or nil,
       plugins = {
         fixture = plugin_fixture,
         nested = plugin_fixture .. "/nested",
@@ -1089,6 +1091,29 @@ assert(
   "bootstrap dropped a module"
 )
 assert(table.concat(calls, ",") == "core,events,keybindings,ui,validate", "bootstrap changed module order")
+
+calls = {}
+tmuxMode = true
+package.loaded["sysinit.pkg.keybindings"] = {
+  setup = function(config, tmux_client)
+    assert(tmux_client, "tmux mode did not disable WezTerm pane and window keys")
+    calls[#calls + 1] = "keybindings"
+    config.keybindings = true
+  end,
+}
+package.loaded["sysinit.pkg.bootstrap"] = nil
+local tmux_built = require("sysinit.pkg.bootstrap").build()
+assert(not tmux_built.enable_tab_bar, "tmux mode left the WezTerm tab bar enabled")
+assert(tmux_built.core and tmux_built.events and tmux_built.keybindings and tmux_built.validate)
+assert(not tmux_built.ui, "tmux mode loaded WezTerm's pane UI")
+assert(table.concat(calls, ",") == "core,keybindings,events,validate", "tmux mode setup was " .. table.concat(calls, ","))
+tmuxMode = false
+package.loaded["sysinit.pkg.keybindings"] = {
+  setup = function(config)
+    calls[#calls + 1] = "keybindings"
+    config.keybindings = true
+  end,
+}
 
 package.loaded["sysinit.pkg.ui"] = {
   setup = function()
