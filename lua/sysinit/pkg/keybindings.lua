@@ -370,25 +370,18 @@ local function merge_keys(...)
   return result
 end
 
-function M.setup(config, tmux_client)
+function M.setup(config)
   config.disable_default_key_bindings = true
 
-  local system_keys = get_system_keys()
-  if tmux_client then
-    for index = #system_keys, 1, -1 do
-      local binding = system_keys[index]
-      if binding.mods == "SUPER|SHIFT" and (binding.key == "w" or binding.key == "b") then
-        table.remove(system_keys, index)
-      end
-    end
-  end
-  local groups = { system_keys, get_font_keys(), get_scroll_keys(), get_search_keys() }
-  if not tmux_client then
-    groups[#groups + 1] = get_pane_keys()
-    groups[#groups + 1] = get_tab_keys()
-    groups[#groups + 1] = get_window_keys()
-  end
-  local keys = merge_keys(table.unpack(groups))
+  local keys = merge_keys(
+    get_system_keys(),
+    get_font_keys(),
+    get_pane_keys(),
+    get_scroll_keys(),
+    get_search_keys(),
+    get_tab_keys(),
+    get_window_keys()
+  )
 
   -- CTRL-g is readline's abort, and it stays bound: it is the switch that turns
   -- every other binding into a passthrough, so it cannot itself pass through.

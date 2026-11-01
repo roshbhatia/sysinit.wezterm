@@ -37,35 +37,26 @@ function M.build()
   local utils = require("sysinit.pkg.utils")
   local settings = utils.load_json_file(utils.get_config_path("config.json"))
   require("spawn_plugin").apply_to_config(config, settings.spawn or {})
-  local tmux_client = settings.terminalMode == "tmux"
-  if not tmux_client then
-    require("session_tree.options").configure({
-      picker = settings.picker,
-      passthrough_procs = settings.passthrough_procs,
-      shell = settings.shell,
-      home = utils.get_home_dir(),
-      binding = { key = "s", mods = "SUPER" },
-      locked = function()
-        return require("sysinit.pkg.keybindings").locked_mode
-      end,
-      workspace_state_dir = utils.state_path("weztermWorkspaceState", "wezterm/workspace_state"),
-      adapters = {
-        format = require("sysinit.pkg.ui.format"),
-        panes = require("sysinit.pkg.ui.panes"),
-        badges = require("sysinit.pkg.ui.badges"),
-      },
-    })
-  end
+  require("session_tree.options").configure({
+    picker = settings.picker,
+    passthrough_procs = settings.passthrough_procs,
+    shell = settings.shell,
+    home = utils.get_home_dir(),
+    binding = { key = "s", mods = "SUPER" },
+    locked = function()
+      return require("sysinit.pkg.keybindings").locked_mode
+    end,
+    workspace_state_dir = utils.state_path("weztermWorkspaceState", "wezterm/workspace_state"),
+    adapters = {
+      format = require("sysinit.pkg.ui.format"),
+      panes = require("sysinit.pkg.ui.panes"),
+      badges = require("sysinit.pkg.ui.badges"),
+    },
+  })
   require("sysinit.pkg.core").setup(config)
-  local optional = OPTIONAL
-  if tmux_client then
-    config.enable_tab_bar = false
-    require("sysinit.pkg.keybindings").setup(config, true)
-    optional = { "events" }
-  end
 
   local failures = {}
-  for _, name in ipairs(optional) do
+  for _, name in ipairs(OPTIONAL) do
     local ok, err = pcall(function()
       require("sysinit.pkg." .. name).setup(config)
     end)
