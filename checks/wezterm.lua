@@ -373,6 +373,15 @@ assert(not selector.alphabet:find("j", 1, true), "j selects a row instead of mov
 assert(not selector.alphabet:find("k", 1, true), "k selects a row instead of moving up")
 assert(not selector.alphabet:find("x", 1, true), "x selects a row after the close action moved out of the picker")
 assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in filter")
+
+local badges = require("sysinit.pkg.ui.badges")
+local badge_names = {}
+for pane_id = 0, 899 do
+  local name = badges.name(pane_id)
+  assert(name:match("^[a-z]+%-[a-z]+$"), "pane badge is not adjective-noun: " .. name)
+  assert(not badge_names[name], "pane badge repeats before the full name list: " .. name)
+  badge_names[name] = true
+end
 assert(
   require("session_tree.switcher").session_tree_description()
     == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",

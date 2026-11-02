@@ -13,7 +13,8 @@ provider.CORE = "/runtime/zmx"
 
 class ZmxTest(unittest.TestCase):
     def request(self, capability, name="review build"):
-        return {"version": "provider/v1", "kind": "request", "capability": capability, "input": {"id": name}}
+        key = "name" if capability == "picker.create" else "id"
+        return {"version": "provider/v1", "kind": "request", "capability": capability, "input": {key: name}}
 
     @patch.object(provider.subprocess, "run")
     def test_lists_names_without_splitting_spaces(self, run):
@@ -29,6 +30,22 @@ class ZmxTest(unittest.TestCase):
         output = provider.respond(self.request("picker.open"))
         self.assertEqual(output["command"], ["/runtime/env", "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", "/runtime/zmx", "attach", "review build"])
         self.assertEqual(output["label"], "review build")
+
+    @patch.object(provider.shutil, "which", return_value="/runtime/env")
+    @patch.object(provider.subprocess, "run")
+    def test_create_starts_a_new_adjective_noun_session(self, run, _which):
+        run.return_value.stdout = ""
+        output = provider.respond(self.request("picker.create", "quiet-falcon"))
+        self.assertEqual(
+            output["command"],
+            ["/runtime/env", "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", "/runtime/zmx", "attach", "quiet-falcon"],
+        )
+        self.assertEqual(run.call_args.args[0], ["/runtime/zmx", "list", "--short"])
+
+    @patch.object(provider.subprocess, "run")
+    def test_create_rejects_names_outside_the_wezterm_convention(self, _run):
+        with self.assertRaisesRegex(ValueError, "lowercase adjective-noun"):
+            provider.respond(self.request("picker.create", "Muadib"))
 
     @patch.object(provider.subprocess, "run")
     def test_stale_session_is_not_created(self, run):

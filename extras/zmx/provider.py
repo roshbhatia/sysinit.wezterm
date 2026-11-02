@@ -5,11 +5,26 @@
 # ///
 import json
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
 
 CORE = sys.argv[1] if len(sys.argv) > 1 else "zmx"
+SESSION_NAME = re.compile(r"[a-z]+-[a-z]+\Z")
+
+
+def attach_plan(name):
+    env = shutil.which("env")
+    if not env:
+        raise FileNotFoundError("env executable is unavailable")
+    return {
+        "kind": "spawn",
+        "label": name,
+        "cwd": str(Path.home()),
+        "command": [env, "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", CORE, "attach", name],
+        "environment": {},
+    }
 
 
 def sessions():
@@ -24,7 +39,11 @@ def respond(request):
         raise ValueError("expected a provider/v1 request")
     capability = request["capability"]
     if capability == "picker.describe":
-        return {"title": "Zmx sessions", "icon": "md_console"}
+        return {
+            "title": "Zmx sessions",
+            "icon": "md_console",
+            "create": {"label": "New zmx session", "prompt": "Session name (adjective-noun)"},
+        }
     if capability == "provider.validate":
         if not shutil.which(CORE):
             raise FileNotFoundError("zmx executable is unavailable")
@@ -42,14 +61,14 @@ def respond(request):
         name = request["input"]["id"]
         if name not in sessions():
             raise ValueError("zmx session no longer exists")
-        env = shutil.which("env")
-        if not env:
-            raise FileNotFoundError("env executable is unavailable")
-        return {
-            "kind": "spawn", "label": name, "cwd": str(Path.home()),
-            "command": [env, "-u", "ZMX_SESSION", "-u", "ZMX_SESSION_PREFIX", CORE, "attach", name],
-            "environment": {},
-        }
+        return attach_plan(name)
+    if capability == "picker.create":
+        name = request["input"]["name"]
+        if not isinstance(name, str) or not SESSION_NAME.fullmatch(name):
+            raise ValueError("session name must be lowercase adjective-noun")
+        if name in sessions():
+            raise ValueError("zmx session already exists: " + name)
+        return attach_plan(name)
     raise ValueError("unsupported capability: " + capability)
 
 

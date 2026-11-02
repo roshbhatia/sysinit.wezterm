@@ -18,6 +18,9 @@
     },
     "picker.open": {
       "description": "picker.open"
+    },
+    "picker.create": {
+      "description": "picker.create"
     }
   },
   "defaults": {
