@@ -376,14 +376,18 @@ assert(not selector.alphabet:find("/", 1, true), "/ cannot enter the built-in fi
 
 local badges = require("sysinit.pkg.ui.badges")
 local badge_names = {}
-for pane_id = 0, 6239 do
+local badge_nouns = {}
+for pane_id = 0, 7919 do
   local name = badges.name(pane_id)
   assert(name:match("^[a-z]+%-[a-z]+$"), "pane badge is not adjective-noun: " .. name)
   assert(not badge_names[name], "pane badge repeats before the full name list: " .. name)
   badge_names[name] = true
+  badge_nouns[name:match("%-([a-z]+)$")] = true
 end
 assert(badges.name(0):match("%-muadib$"), "pane 0 lost its original character noun")
-assert(badges.name(18):match("%-chani$"), "pane 18 lost its original character noun")
+for _, noun in ipairs({ "chani", "saphira", "locke", "sabetha", "bilbo", "goldberry", "geralt", "yennefer" }) do
+  assert(badge_nouns[noun], "pane noun catalog is missing " .. noun)
+end
 assert(
   require("session_tree.switcher").session_tree_description()
     == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
