@@ -1,0 +1,30 @@
+checks/wezterm.lua
+  s_00f0f53292bea7::t_0ebff12b11a279 376-384
+extras/zmx/provider.json
+  s_00f0f53292bea7::t_59ab946277bf99 21-23
+extras/zmx/provider.py
+  s_00f0f53292bea7::t_59ab946277bf99 8,14-27,42-46,64-71
+lua/sysinit/pkg/ui/badges.lua
+  s_00f0f53292bea7::t_7ed0717a36fa4c 3-23,25-33,36-75,96
+checks/test_zmx.py
+  s_00f0f53292bea7::t_1173b8da60ec73 16-17
+  s_00f0f53292bea7::t_59ab946277bf99 34-49
+extras/zmx/README.md
+  s_00f0f53292bea7::t_59ab946277bf99 14
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "14f13f390b931c0cb36971fdcdc3488d08aa17c3",
+  "prompts": {},
+  "sessions": {
+    "s_00f0f53292bea7": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1933c-a6e8-7442-97c4-87ca5f511b94",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
