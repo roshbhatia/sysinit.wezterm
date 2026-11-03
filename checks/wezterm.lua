@@ -918,8 +918,10 @@ local overrides = { preserved = true }
 local get_override_calls = 0
 local set_override_calls = 0
 local event_action
+local focus_requests = 0
 local active_event_id = 1
 local event_window = {
+  focus = function() focus_requests = focus_requests + 1 end,
   active_pane = function()
     return {
       pane_id = function()
@@ -966,6 +968,8 @@ event_window.mux_window = function()
   }
 end
 
+handlers["user-var-changed"](event_window, event_pane, "SYSINIT_FOCUS", "request")
+assert(focus_requests == 1, "renderer focus request did not raise its owning GUI window")
 handlers["user-var-changed"](event_window, event_pane, "wez_copy", "copied text")
 assert(clipboard.value == "copied text" and clipboard.target == "Clipboard", "wez_copy missed the clipboard")
 handlers["user-var-changed"](event_window, event_pane, "SYSINIT_NAV", "left:editor")
