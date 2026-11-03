@@ -16,6 +16,7 @@ local function get_basic_config()
 
   return {
     custom_shaders = settings.customShaders,
+    custom_shaders_animation_duration_ms = settings.customShadersAnimationDurationMs,
     default_prog = settings.shell or { nix_zsh },
     set_environment_variables = environment,
   }
