@@ -1,0 +1,14 @@
+lua/sysinit/pkg/core.lua
+  h_9ee7ffa72fd255 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e9799298c76a5444aaa9232427a405fd8885bc40",
+  "prompts": {},
+  "humans": {
+    "h_9ee7ffa72fd255": {
+      "author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
