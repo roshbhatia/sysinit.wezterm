@@ -43,6 +43,7 @@ local json_parse = function(text)
   error("no json_parse stub for: " .. tostring(text))
 end
 local logged = {}
+local last_format_parts
 -- The mux the tree walks and the panes it can activate; each test sets them.
 local mux_windows = {}
 local mux_panes = {}
@@ -58,6 +59,7 @@ local action = setmetatable({}, {
 
 local wezterm = {
   format = function(parts)
+    last_format_parts = parts
     local text = {}
     for _, part in ipairs(parts) do
       if type(part) == "table" and part.Text then
@@ -280,6 +282,49 @@ for key, direction in pairs({ LeftArrow = "Left", RightArrow = "Right", UpArrow 
   assert(floating_window.last.AdjustPaneSize[1] == direction, "resize chord uses the wrong direction")
   assert(floating_window.last.AdjustPaneSize[2] == 3, "resize chord uses the wrong increment")
 end
+
+key_binding("j", "SUPER|CTRL").action(floating_window, {})
+assert(floating_window.last.ScaleFloatingPane == -5, "combined shrink does not use the native scale operation")
+key_binding("k", "SUPER|CTRL").action(floating_window, {})
+assert(floating_window.last.ScaleFloatingPane == 5, "combined grow does not use the native scale operation")
+local floating_ui = require("sysinit.pkg.ui.floating")
+local base = { current_working_dir = { file_path = "/github/project" } }
+local popup = { current_working_dir = { file_path = "/tmp/scratch" } }
+local float_tab = {
+  active_pane = popup,
+  active_normal_pane = base,
+  is_active = true,
+  floating_pane_count = 2,
+  floating_pane_visible = true,
+}
+assert(floating_ui.normal_pane(float_tab) == base)
+assert(
+  floating_ui.parent(float_tab) == "github" and floating_ui.cwd(float_tab) == "project",
+  "floating cwd replaced parent tab identity"
+)
+local palette = { accent = "accent", muted = "muted", normal = "normal" }
+assert(floating_ui.badge(float_tab, palette) == " F2", "float count badge is missing")
+assert(last_format_parts[1].Foreground.Color == "accent", "visible float badge is not highlighted")
+float_tab.is_active = false
+assert(
+  floating_ui.badge(float_tab, palette) == " F2" and last_format_parts[1].Foreground.Color == "muted",
+  "inactive tabs advertise a focused float"
+)
+float_tab.is_active = true
+float_tab.floating_pane_visible = false
+assert(floating_ui.badge(float_tab, palette) == " F2", "hidden floats disappeared from their owner tab")
+assert(last_format_parts[1].Foreground.Color == "muted", "hidden float badge is not subdued")
+float_tab.floating_pane_count = 0
+assert(floating_ui.badge(float_tab, palette) == "", "normal tabs gained a floating badge")
+local stock_tab = setmetatable({ active_pane = base }, {
+  __index = function(_, key)
+    error("unknown field " .. key)
+  end,
+})
+assert(
+  floating_ui.normal_pane(stock_tab) == base and floating_ui.badge(stock_tab, palette) == "",
+  "stock WezTerm compatibility failed"
+)
 
 local performed = {}
 local pane_vars = { IS_NVIM = "true" }

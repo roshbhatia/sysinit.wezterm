@@ -3,6 +3,7 @@ local ui_badges = require("sysinit.pkg.ui.badges")
 local ui_format = require("sysinit.pkg.ui.format")
 local ui_statusbar = require("sysinit.pkg.ui.statusbar")
 local ui_panes = require("sysinit.pkg.ui.panes")
+local ui_floating = require("sysinit.pkg.ui.floating")
 
 local nf = wezterm.nerdfonts or {}
 
@@ -11,7 +12,7 @@ local M = {}
 local SHELLS = { zsh = true, bash = true, fish = true, sh = true, nu = true, ["-zsh"] = true }
 
 function M.format(tab, cfg, ctx)
-  local pane = tab.active_pane
+  local pane = ui_floating.normal_pane(tab)
   local explicit = ui_format.normalize_proc(tab.tab_title or "")
   local osc = ui_format.normalize_proc(pane and pane.title or "")
   local proc = pane and pane.foreground_process_name
@@ -19,8 +20,19 @@ function M.format(tab, cfg, ctx)
     proc = ui_format.normalize_proc(proc:match("([^/]+)$") or proc)
   end
 
+  local colors = (cfg and cfg.colors) or {}
+  local inactive = colors.tab_bar and colors.tab_bar.inactive_tab
+  local badge = ui_floating.badge(tab, {
+    accent = (colors.ansi and colors.ansi[5]) or colors.foreground or "#ffffff",
+    muted = (inactive and inactive.fg_color)
+      or (colors.brights and colors.brights[1])
+      or colors.foreground
+      or "#ffffff",
+    normal = colors.foreground or "#ffffff",
+  })
+
   if explicit ~= "" and not explicit:match("^%d+$") then
-    return " " .. ui_statusbar.tab_index(tab) .. " " .. explicit .. " "
+    return " " .. ui_statusbar.tab_index(tab) .. " " .. explicit .. badge .. " "
   end
 
   local dir
@@ -44,7 +56,7 @@ function M.format(tab, cfg, ctx)
   label = label or dir or proc or "shell"
 
   if not (ctx.sigil_ok and ctx.ribbon_ok) then
-    return " " .. ui_statusbar.tab_index(tab) .. " " .. label .. " "
+    return " " .. ui_statusbar.tab_index(tab) .. " " .. label .. badge .. " "
   end
 
   local r = ctx.ribbon.new("tab")
@@ -58,7 +70,7 @@ function M.format(tab, cfg, ctx)
     end
   end)
 
-  if pane and pane.is_zoomed then
+  if tab.active_pane and tab.active_pane.is_zoomed then
     r:append(nil, nil, nf.md_dock_window and (nf.md_dock_window .. " ") or "⊞ ")
   end
 
@@ -78,7 +90,7 @@ function M.format(tab, cfg, ctx)
     end
   end
 
-  r:append(nil, nil, " ")
+  r:append(nil, nil, badge .. " ")
   return r:items()
 end
 

@@ -8,6 +8,7 @@ local ui_session_tree = require("sysinit.pkg.ui.session_tree")
 local ui_sessions = require("sysinit.pkg.ui.sessions")
 local ui_statusbar = require("sysinit.pkg.ui.statusbar")
 local ui_tabtitle = require("sysinit.pkg.ui.tabtitle")
+local ui_floating = require("sysinit.pkg.ui.floating")
 local ui_windowtitle = require("sysinit.pkg.ui.windowtitle")
 local ui_switcher = require("sysinit.pkg.ui.switcher")
 local ui_rollup = require("sysinit.pkg.ui.rollup")
@@ -31,6 +32,29 @@ function M.setup(config)
 
   if config_data.colors then
     config.colors = config_data.colors
+  end
+
+  local supports_floating = pcall(function()
+    return wezterm.action.ToggleFloatingPane
+  end)
+  local colors = config.colors or {}
+  local accent = (colors.ansi and colors.ansi[5]) or colors.foreground or "#c4a7e7"
+  local inactive = colors.tab_bar and colors.tab_bar.inactive_tab
+  local muted = (inactive and inactive.fg_color)
+    or (colors.brights and colors.brights[1])
+    or colors.foreground
+    or "#908caa"
+  if supports_floating then
+    config.floating_pane_border = {
+      left_width = 2,
+      right_width = 2,
+      top_height = 2,
+      bottom_height = 2,
+      left_color = accent,
+      right_color = accent,
+      top_color = accent,
+      bottom_color = accent,
+    }
   end
 
   config.inactive_pane_hsb = {
@@ -316,16 +340,32 @@ function M.setup(config)
           { Text = "  " },
           ui_statusbar.tab_index,
           { Text = " " },
-          { "parent", padding = 0 },
+          ui_floating.parent,
           "/",
-          { "cwd", padding = { left = 0, right = 1 } },
+          function(tab)
+            return ui_floating.cwd(tab) .. " "
+          end,
+          function(tab)
+            return ui_floating.badge(
+              tab,
+              { accent = accent, muted = muted, normal = tabline.get_theme().tab.active.fg }
+            )
+          end,
           { Text = "  " },
         },
         tab_inactive = {
           { Text = "  " },
           ui_statusbar.tab_index,
           { Text = " " },
-          { "cwd", padding = { left = 0, right = 1 } },
+          function(tab)
+            return ui_floating.cwd(tab) .. " "
+          end,
+          function(tab)
+            return ui_floating.badge(
+              tab,
+              { accent = accent, muted = muted, normal = tabline.get_theme().tab.inactive.fg }
+            )
+          end,
           { Text = "  " },
         },
       },

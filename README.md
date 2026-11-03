@@ -74,10 +74,19 @@ or press Cmd+Shift+F to hide it; its process keeps running. The command palette
 also exposes actions to move a floating pane back to a horizontal or vertical
 split. These bindings are omitted on builds without floating-pane support.
 
-Cmd+Ctrl+Left/Right narrows or widens the active floating pane by three columns;
+Cmd+Ctrl+J shrinks both floating-pane dimensions by approximately 5%; Cmd+Ctrl+K
+grows both. Scaling preserves the current proportions and stops at the shared
+size limit. Cmd+Ctrl+Left/Right narrows or widens the active floating pane by three columns;
 Cmd+Ctrl+Up/Down decreases or increases its height by three rows. The existing
 Ctrl+Shift+H/L and K/J pane-resize chords also work at a shell prompt. Resizing
 keeps the floating pane centered and preserves its size when hidden and restored.
+
+The parent tab keeps its underlying pane's directory label. An F badge indicates
+one floating pane; F2, F3, and so on show the total when there are several. The
+badge uses the accent color while a float is visible in the selected tab, and a
+muted color when hidden or in another tab. Floats use an opaque background, a
+thin theme-accent border, and an even content inset. The window title follows
+the focused process.
 
 Native mux panes retain their domain. SSH processes reconnect with their
 destination and connection options, without replaying remote commands or

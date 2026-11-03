@@ -138,6 +138,14 @@ local function get_pane_keys()
     )
   end
 
+  local supports_scaling, scale_floating = pcall(function()
+    return act.ScaleFloatingPane
+  end)
+  if supports_scaling then
+    table.insert(keys, create_smart_keybind("j", "SUPER|CTRL", scale_floating(-5)))
+    table.insert(keys, create_smart_keybind("k", "SUPER|CTRL", scale_floating(5)))
+  end
+
   for _, key in ipairs({ "h", "j", "k", "l" }) do
     local dir = DIRECTION_KEYS[key]
     table.insert(keys, create_smart_keybind(key, "CTRL", { ActivatePaneDirection = dir }, { passthrough = TRACE_NAV }))
