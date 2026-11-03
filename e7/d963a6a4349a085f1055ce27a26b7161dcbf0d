@@ -1,0 +1,21 @@
+checks/activity.lua
+  s_2df4c1d29412fe::t_6524b3a6f50259 118-124
+lua/sysinit/pkg/ui/panes.lua
+  s_2df4c1d29412fe::t_6c1babaf36c5d4 101-104,109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e7d963a6a4349a085f1055ce27a26b7161dcbf0d",
+  "prompts": {},
+  "sessions": {
+    "s_2df4c1d29412fe": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a223-7da2-7e93-a06a-44201e93b6bc",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
