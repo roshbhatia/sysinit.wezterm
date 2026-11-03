@@ -6,7 +6,6 @@ WezTerm configuration composed from standalone plugins and pinned upstream integ
 - [spawn.wezterm](https://github.com/roshbhatia/spawn.wezterm) owns host-aware spawn actions and the `wezspawn` CLI.
 - [smart-keys.wezterm](https://github.com/roshbhatia/smart-keys.wezterm) owns application passthrough and the navigation boundary callback.
 
-This repository owns the theme, key assignments, agent adapters, Nix module, and Zmx/zoxide provider packages.
 Each plugin also supports plain Lua installation without this configuration.
 
 `lib.luaSource pkgs` returns the assembled Lua source, including pinned plugin modules.
@@ -29,7 +28,6 @@ Register the providers you want:
 let
   system = pkgs.stdenv.hostPlatform.system;
   hosts = inputs.tether.packages.${system}.provider-wezterm;
-  terminals = inputs.sysinit-wezterm.packages.${system}.provider-zmx;
   sessions = inputs.seshy.packages.${system}.provider-wezterm;
   folders = inputs.sysinit-wezterm.packages.${system}.provider-zoxide;
 in {
@@ -38,7 +36,6 @@ in {
     enable = true;
     settings.picker.providers = [
       { key = "@"; name = "tether"; manifest = "${hosts}/share/wezterm/providers/tether.json"; }
-      { key = "#"; name = "zmx"; manifest = "${terminals}/share/wezterm/providers/zmx.json"; }
       { key = "$"; name = "seshy"; manifest = "${sessions}/share/wezterm/providers/seshy.json"; }
       { key = "%"; name = "zoxide"; manifest = "${folders}/share/wezterm/providers/zoxide.json"; }
     ];
@@ -52,7 +49,6 @@ Provider icons and row fields come from the provider response.
 
 The header groups providers, navigation, and actions. Provider order follows
 configuration order after the built-in `!` WezTerm provider.
-After `!` WezTerm, scope decreases: `@` Tether hosts, `#` Zmx sessions, `$` Seshy projects, and `%` zoxide folders.
 
 `!` lists the default workspace and native sessions created through this picker.
 Choose `New session` and enter a name to start the configured shell at home.
@@ -73,7 +69,6 @@ explicit port forwards. Mosh clients retain their original `user@host` target.
 If Mosh's process title does not expose an unambiguous target, the action reports
 an error instead of opening a pane on the wrong host.
 
-The [Zmx provider](extras/zmx/README.md) attaches existing local persistent sessions.
 
 ## Window launcher
 

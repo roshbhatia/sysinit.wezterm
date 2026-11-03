@@ -154,6 +154,15 @@ function M.setup(config)
     if not ok_ws or type(ws) ~= "string" or ws == "" then
       return
     end
+    local ok_title, tmux_title = pcall(function()
+      local pane = wezterm.mux.get_pane(focused_pane_id())
+      if pane and (pane:get_user_vars() or {}).SYSINIT_TMUX_SESSION and utils.get_process_name(pane) == "tmux" then
+        return pane:get_title()
+      end
+    end)
+    if ok_title and type(tmux_title) == "string" and tmux_title ~= "" then
+      ws = tmux_title
+    end
     pcall(function()
       local f = io.open(selection_dir .. "/selected.json", "w")
       if not f then

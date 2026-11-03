@@ -89,6 +89,14 @@ function M.configure(specs)
   history = {}
 end
 
+function M.restore_history(saved)
+  history = saved or {}
+end
+
+function M.snapshot_history()
+  return history
+end
+
 function M.forget_missing(present)
   for id in pairs(history) do
     if not present[id] then

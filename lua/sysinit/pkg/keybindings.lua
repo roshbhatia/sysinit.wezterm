@@ -370,6 +370,7 @@ local function merge_keys(...)
   return result
 end
 
+
 function M.setup(config)
   config.disable_default_key_bindings = true
 
@@ -388,8 +389,12 @@ function M.setup(config)
   table.insert(keys, {
     key = "g",
     mods = "CTRL",
-    action = wezterm.action_callback(function()
-      M.locked_mode = not M.locked_mode
+    action = wezterm.action_callback(function(window, pane)
+      if (pane:get_user_vars() or {}).SYSINIT_TMUX_SESSION and utils.get_process_name(pane) == "tmux" then
+        window:perform_action(act.SendKey({ key = "g", mods = "CTRL" }), pane)
+      else
+        M.locked_mode = not M.locked_mode
+      end
     end),
   })
 

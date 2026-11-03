@@ -55,6 +55,20 @@ function M.build()
   })
   require("sysinit.pkg.core").setup(config)
 
+  wezterm.on("update-status", function(window, pane)
+    local ok, tmux_client = pcall(function()
+      return (pane:get_user_vars() or {}).SYSINIT_TMUX_SESSION ~= nil and utils.get_process_name(pane) == "tmux"
+    end)
+    if not ok then
+      return
+    end
+    local overrides = window:get_config_overrides() or {}
+    if overrides.enable_tab_bar ~= not tmux_client then
+      overrides.enable_tab_bar = not tmux_client
+      window:set_config_overrides(overrides)
+    end
+  end)
+
   local failures = {}
   for _, name in ipairs(OPTIONAL) do
     local ok, err = pcall(function()
@@ -69,6 +83,7 @@ function M.build()
     report(failures)
   end
 
+  require("sysinit.pkg.tmux_renderer").setup(config)
   require("sysinit.pkg.validate").setup(config)
 
   return config
