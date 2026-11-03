@@ -97,6 +97,24 @@ function M.forget_missing(present)
   end
 end
 
+function M.program_state(p)
+  if not p.get_program_status then
+    return nil
+  end
+  local states = { blocked = "waiting", error = "waiting", working = "working", done = "done", idle = "idle" }
+  local selected, status
+  for _, record in ipairs(p:get_program_status()) do
+    local mapped = states[record.state]
+    if mapped and (not status or M.state_rank[mapped] > M.state_rank[status]) then
+      selected, status = record, mapped
+    end
+  end
+  if selected then
+    local reason = selected.msg or selected.title or selected.state
+    return status, reason, nil, selected.app or "program", "osc7501"
+  end
+end
+
 function M.agent_state(p, deck_states, record, now)
   now = now or os.time()
   local id = p.pane_id and p:pane_id() or p

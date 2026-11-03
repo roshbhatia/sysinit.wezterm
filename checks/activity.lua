@@ -97,3 +97,21 @@ assert(state() == "unknown", "quoted instructions became a blocker")
 reset("pi")
 proc = { pid = 50, executable = "/bin/node", argv = { "node", "/some/pi/dist/cli.js" } }
 assert(state({ status = "working", agent = "pi", since = 2 }) == "working", "unrecognized runtime erased valid hook")
+
+local records = {
+  { id = "", state = "idle", app = "cargo" },
+  { id = "test", state = "working", app = "cargo" },
+  { id = "test/unit", state = "blocked", app = "cargo", msg = "Approve tests?" },
+}
+pane.get_program_status = function()
+  return records
+end
+local status, reason, _, agent, source = panes.program_state(pane)
+assert(status == "waiting" and reason == "Approve tests?" and agent == "cargo" and source == "osc7501")
+records = { { id = "", state = "error", msg = "Build failed" } }
+assert(panes.program_state(pane) == "waiting")
+records = {}
+assert(panes.program_state(pane) == nil)
+pane.get_program_status = nil
+assert(panes.program_state(pane) == nil)
+print("OSC 7501 program status precedence and upstream fallback passed")

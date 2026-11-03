@@ -16,7 +16,10 @@ function M.collect(deck_states)
           local pane_id = p:pane_id()
           present[pane_id] = true
           local rec = panes_mod.read_pane_record(pane_id)
-          local status, reason, since, agent, source = panes_mod.agent_state(p, deck_states, rec or false)
+          local status, reason, since, agent, source = panes_mod.program_state(p)
+          if not status then
+            status, reason, since, agent, source = panes_mod.agent_state(p, deck_states, rec or false)
+          end
           if status then
             -- A VT that eats OSC 7 leaves the pane reporting its wrapper's cwd,
             -- so the record's git toplevel is the more trustworthy of the two.

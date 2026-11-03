@@ -15,6 +15,7 @@ local function get_basic_config()
   environment.TERM = environment.TERM or "wezterm"
 
   return {
+    custom_shaders = settings.customShaders,
     default_prog = settings.shell or { nix_zsh },
     set_environment_variables = environment,
   }
