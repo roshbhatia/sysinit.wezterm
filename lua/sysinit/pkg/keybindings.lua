@@ -121,6 +121,23 @@ local function get_pane_keys()
     create_smart_keybind("n", "CTRL", act.RotatePanes("Clockwise"), { passthrough = TRACE_KEYS }),
   }
 
+  local supports_floating, toggle_floating = pcall(function()
+    return act.ToggleFloatingPane
+  end)
+  if supports_floating then
+    table.insert(keys, create_smart_keybind("f", "SUPER|SHIFT", toggle_floating))
+    table.insert(
+      keys,
+      create_smart_keybind(
+        "Enter",
+        "SUPER|SHIFT",
+        act.SpawnCommandInNewFloatingPane({
+          domain = "CurrentPaneDomain",
+        })
+      )
+    )
+  end
+
   for _, key in ipairs({ "h", "j", "k", "l" }) do
     local dir = DIRECTION_KEYS[key]
     table.insert(keys, create_smart_keybind(key, "CTRL", { ActivatePaneDirection = dir }, { passthrough = TRACE_NAV }))
@@ -429,8 +446,7 @@ function M.setup(config)
       mouse_bindings[#mouse_bindings + 1] = {
         event = { Down = { streak = streak, button = "Left" } },
         mods = mods,
-        action = streak == 3 and semantic_selection(act.SelectTextAtMouseCursor)
-          or act.SelectTextAtMouseCursor(mode),
+        action = streak == 3 and semantic_selection(act.SelectTextAtMouseCursor) or act.SelectTextAtMouseCursor(mode),
       }
       mouse_bindings[#mouse_bindings + 1] = {
         event = { Drag = { streak = streak, button = "Left" } },

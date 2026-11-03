@@ -67,6 +67,13 @@ Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
 host. Add Shift to use the local host. These chords take priority over shell
 widgets and application bindings; locked mode passes them through.
 
+On the sysinit WezTerm fork, Cmd+Shift+F creates or toggles the tab's floating
+pane. Cmd+Shift+Enter creates another floating pane in the current domain and
+directory. Ctrl+H/L cycles floating panes while one is visible. Click outside
+or press Cmd+Shift+F to hide it; its process keeps running. The command palette
+also exposes actions to move a floating pane back to a horizontal or vertical
+split. These bindings are omitted on builds without floating-pane support.
+
 Native mux panes retain their domain. SSH processes reconnect with their
 destination and connection options, without replaying remote commands or
 explicit port forwards. Mosh clients retain their original `user@host` target.

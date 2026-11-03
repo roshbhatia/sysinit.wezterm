@@ -227,7 +227,11 @@ for streak, mode in ipairs(SELECTION_MODE) do
           end,
         }
         local performed
-        local window = { perform_action = function(_, value) performed = value end }
+        local window = {
+          perform_action = function(_, value)
+            performed = value
+          end,
+        }
         down(window, pane)
         assert(performed.SelectTextAtMouseCursor == (marked and "SemanticZone" or "Line"))
         drag(window, pane)
@@ -258,6 +262,19 @@ local function key_binding(key, mods)
   end
   error("missing WezTerm chord: " .. mods .. "+" .. key)
 end
+
+local floating_window = {
+  perform_action = function(self, action)
+    self.last = action
+  end,
+}
+key_binding("f", "SUPER|SHIFT").action(floating_window, {})
+assert(floating_window.last.ToggleFloatingPane ~= nil, "floating toggle does not reach the native action")
+key_binding("Enter", "SUPER|SHIFT").action(floating_window, {})
+assert(
+  floating_window.last.SpawnCommandInNewFloatingPane.domain == "CurrentPaneDomain",
+  "floating spawn loses the current domain"
+)
 
 local performed = {}
 local pane_vars = { IS_NVIM = "true" }
