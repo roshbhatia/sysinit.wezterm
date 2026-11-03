@@ -1,0 +1,23 @@
+README.md
+  s_6a59011b119c6f::t_cd7640b018ada8 77-79,84-90
+lua/sysinit/pkg/keybindings.lua
+  s_6a59011b119c6f::t_9217b49565fcfb 141-148
+lua/sysinit/pkg/ui/floating.lua
+  s_6a59011b119c6f::t_ef65c506d6fa5b 1-54
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0a422b501851643b849adeaa0acae02db9b8675e",
+  "prompts": {},
+  "sessions": {
+    "s_6a59011b119c6f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a32a-8f2d-7b71-a53f-f90208b124f1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
