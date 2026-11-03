@@ -98,12 +98,15 @@ function M.forget_missing(present)
 end
 
 function M.program_state(p)
-  if not p.get_program_status then
+  local ok, records = pcall(function()
+    return p:get_program_status()
+  end)
+  if not ok then
     return nil
   end
   local states = { blocked = "waiting", error = "waiting", working = "working", done = "done", idle = "idle" }
   local selected, status
-  for _, record in ipairs(p:get_program_status()) do
+  for _, record in ipairs(records) do
     local mapped = states[record.state]
     if mapped and (not status or M.state_rank[mapped] > M.state_rank[status]) then
       selected, status = record, mapped

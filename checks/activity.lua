@@ -115,3 +115,10 @@ assert(panes.program_state(pane) == nil)
 pane.get_program_status = nil
 assert(panes.program_state(pane) == nil)
 print("OSC 7501 program status precedence and upstream fallback passed")
+
+local upstream_pane = setmetatable({}, {
+  __index = function(_, key)
+    error("attempt to get an unknown field '" .. key .. "'")
+  end,
+})
+assert(panes.program_state(upstream_pane) == nil, "upstream userdata must retain agent status fallback")
