@@ -85,7 +85,10 @@ function M.setup(config)
   end
 
   local function locked_indicator()
-    return ui_statusbar.locked_indicator(keybindings.locked_mode)
+    if keybindings.locked_mode then
+      return "  "
+    end
+    return "  "
   end
 
   require("sysinit.pkg.ui.panes").configure(config_data.agents)
@@ -150,15 +153,6 @@ function M.setup(config)
     local ok_ws, ws = pcall(wezterm.mux.get_active_workspace)
     if not ok_ws or type(ws) ~= "string" or ws == "" then
       return
-    end
-    local ok_title, tmux_title = pcall(function()
-      local pane = wezterm.mux.get_pane(focused_pane_id())
-      if pane and (pane:get_user_vars() or {}).SYSINIT_TMUX_SESSION and utils.get_process_name(pane) == "tmux" then
-        return pane:get_title()
-      end
-    end)
-    if ok_title and type(tmux_title) == "string" and tmux_title ~= "" then
-      ws = tmux_title
     end
     pcall(function()
       local f = io.open(selection_dir .. "/selected.json", "w")
@@ -359,8 +353,8 @@ function M.setup(config)
     config.window_padding = {
       left = "1cell",
       right = "1cell",
-      top = "1.5cell",
-      bottom = "1.5cell",
+      top = "1cell",
+      bottom = "0cell",
     }
   end
 

@@ -4,10 +4,6 @@ local ui_sessions = require("sysinit.pkg.ui.sessions")
 
 local M = {}
 
-function M.locked_indicator(locked)
-  return locked and "  " or "  "
-end
-
 function M.tab_index(tab)
   return "[" .. tostring(tab.tab_index + 1) .. "]"
 end

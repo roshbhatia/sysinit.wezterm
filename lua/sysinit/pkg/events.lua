@@ -11,9 +11,7 @@ function M.setup(config)
   }
 
   wezterm.on("user-var-changed", function(window, pane, name, value)
-    if name == "SYSINIT_FOCUS" then
-      window:focus()
-    elseif name == "wez_copy" then
+    if name == "wez_copy" then
       window:copy_to_clipboard(value, "Clipboard")
     elseif name == "wez_not" then
       window:toast_notification("wezterm", value, nil, 4000)

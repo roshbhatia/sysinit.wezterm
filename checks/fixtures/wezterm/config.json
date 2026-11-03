@@ -11,6 +11,7 @@
     "symbols": "monospace"
   },
   "passthrough_procs": [
+    "zmx",
     "caffeinate"
   ],
   "plugins": {},

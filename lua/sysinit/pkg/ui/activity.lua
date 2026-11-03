@@ -1,6 +1,6 @@
 local M = {}
 
-local transports = { ssh = true, mosh = true, ["mosh-client"] = true, tmux = true }
+local transports = { ssh = true, mosh = true, ["mosh-client"] = true, zmx = true, tmux = true }
 local shells = { zsh = true, bash = true, fish = true, sh = true, nu = true }
 
 local function matches(text, patterns)

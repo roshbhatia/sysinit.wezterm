@@ -170,12 +170,13 @@ package.loaded["sysinit.pkg.utils"] = {
         command = { "picker-call" },
         providers = {
           { key = "@", name = "tether", manifest = "hosts.json" },
+          { key = "#", name = "zmx", manifest = "zmx.json" },
           { key = "$", name = "seshy", manifest = "sessions.json" },
           { key = "%", name = "zoxide", manifest = "folders.json" },
         },
       },
       cwd_aliases = { sy = "/state/seshy/sessions" },
-      passthrough_procs = { "caffeinate" },
+      passthrough_procs = { "zmx", "caffeinate" },
     }
   end,
   state_path = function(_, fallback)
@@ -248,12 +249,8 @@ end
 local performed = {}
 local pane_vars = { IS_NVIM = "true" }
 local window = {
-  perform_action = function(self, value, target)
-    if type(value) == "function" then
-      value(self, target)
-    else
-      performed[#performed + 1] = value
-    end
+  perform_action = function(_, value)
+    performed[#performed + 1] = value
   end,
 }
 local pane = {
@@ -393,7 +390,7 @@ for _, noun in ipairs({ "chani", "saphira", "locke", "sabetha", "bilbo", "goldbe
 end
 assert(
   require("session_tree.switcher").session_tree_description()
-    == "  ! wezterm  @ tether  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
+    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
@@ -430,7 +427,7 @@ for _, binding in ipairs(session_config.key_tables.session_tree_selector) do
   session_keys[binding.key] = binding
 end
 assert(
-  session_keys["@"] and session_keys["!"] and session_keys["$"] and session_keys.x,
+  session_keys["@"] and session_keys["!"] and session_keys["#"] and session_keys["$"] and session_keys.x,
   "session actions are absent from the hidden key table"
 )
 assert(session_keys["/"], "slash cannot leave the action layer and enter filtering")
@@ -485,7 +482,7 @@ local context = {
 local first_config, second_config = {}, {}
 switcher.setup(first_config, { apply_to_config = function() end }, context)
 switcher.setup(second_config, { apply_to_config = function() end }, context)
-for _, shortcut in ipairs({ "!", "@", "$", "%" }) do
+for _, shortcut in ipairs({ "!", "@", "#", "$", "%" }) do
   tree_actions = {}
   for _, binding in ipairs(first_config.keys) do
     if binding.key == "s" and binding.mods == "SUPER" then
@@ -569,19 +566,6 @@ assert(tree.sections == nil, "directory catalogs leaked into the live tree")
 local plan = { kind = "spawn", cwd = "/work/a b", command = {}, environment = { SESSION = "review" } }
 assert(launcher.spawn(plan).domain.DomainName == "local", "provider opened on the current remote domain")
 assert(launcher.spawn({ kind = "spawn", cwd = "relative", command = {}, environment = {} }) == nil)
-
-local saved_process = current_process
-require("sysinit.pkg.tmux_renderer").setup(key_config)
-current_process = "tmux"
-pane_vars = { SYSINIT_TMUX_SESSION = "main" }
-key_binding("h", "CTRL").action(window, pane)
-assert(performed[#performed].SendKey.key == "h", "tmux navigation was intercepted by WezTerm")
-current_process = "zsh"
-key_binding("v", "CTRL").action(window, pane)
-assert(performed[#performed].SplitPane, "a stale tmux marker disabled native splits")
-current_process = saved_process
-pane_vars = {}
-
 local performed, notices, argv = {}, {}, {}
 local launch_window = {
   active_pane = function()
@@ -713,10 +697,7 @@ local ui_format = require("sysinit.pkg.ui.format")
 assert(ui_format.smart_path("/state/seshy/sessions/alpha") == "{sy}/alpha", "a configured alias did not abbreviate")
 assert(ui_format.smart_path("/state/seshy/sessions") == "{sy}", "an alias did not abbreviate its own directory")
 assert(ui_format.smart_path("/state/seshy/sessionsx") == "/state/seshy/sessionsx", "an alias matched a sibling prefix")
-assert(
-  ui_format.is_passthrough("caffeinate") and not ui_format.is_passthrough("nvim"),
-  "passthrough config was ignored"
-)
+assert(ui_format.is_passthrough("zmx") and not ui_format.is_passthrough("nvim"), "passthrough config was ignored")
 
 local opaque = "1vck9ziv21pzp08093vb3nk4634nk760miia5116w45c2ncp4vqc"
 local transient_pane = {
@@ -918,10 +899,8 @@ local overrides = { preserved = true }
 local get_override_calls = 0
 local set_override_calls = 0
 local event_action
-local focus_requests = 0
 local active_event_id = 1
 local event_window = {
-  focus = function() focus_requests = focus_requests + 1 end,
   active_pane = function()
     return {
       pane_id = function()
@@ -968,8 +947,6 @@ event_window.mux_window = function()
   }
 end
 
-handlers["user-var-changed"](event_window, event_pane, "SYSINIT_FOCUS", "request")
-assert(focus_requests == 1, "renderer focus request did not raise its owning GUI window")
 handlers["user-var-changed"](event_window, event_pane, "wez_copy", "copied text")
 assert(clipboard.value == "copied text" and clipboard.target == "Clipboard", "wez_copy missed the clipboard")
 handlers["user-var-changed"](event_window, event_pane, "SYSINIT_NAV", "left:editor")
