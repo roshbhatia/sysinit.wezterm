@@ -275,6 +275,11 @@ assert(
   floating_window.last.SpawnCommandInNewFloatingPane.domain == "CurrentPaneDomain",
   "floating spawn loses the current domain"
 )
+for key, direction in pairs({ LeftArrow = "Left", RightArrow = "Right", UpArrow = "Up", DownArrow = "Down" }) do
+  key_binding(key, "SUPER|CTRL").action(floating_window, {})
+  assert(floating_window.last.AdjustPaneSize[1] == direction, "resize chord uses the wrong direction")
+  assert(floating_window.last.AdjustPaneSize[2] == 3, "resize chord uses the wrong increment")
+end
 
 local performed = {}
 local pane_vars = { IS_NVIM = "true" }

@@ -74,6 +74,11 @@ or press Cmd+Shift+F to hide it; its process keeps running. The command palette
 also exposes actions to move a floating pane back to a horizontal or vertical
 split. These bindings are omitted on builds without floating-pane support.
 
+Cmd+Ctrl+Left/Right narrows or widens the active floating pane by three columns;
+Cmd+Ctrl+Up/Down decreases or increases its height by three rows. The existing
+Ctrl+Shift+H/L and K/J pane-resize chords also work at a shell prompt. Resizing
+keeps the floating pane centered and preserves its size when hidden and restored.
+
 Native mux panes retain their domain. SSH processes reconnect with their
 destination and connection options, without replaying remote commands or
 explicit port forwards. Mosh clients retain their original `user@host` target.

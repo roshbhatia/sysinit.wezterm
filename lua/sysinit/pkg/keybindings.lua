@@ -147,6 +147,15 @@ local function get_pane_keys()
     )
   end
 
+  for _, binding in ipairs({
+    { "LeftArrow", "Left" },
+    { "RightArrow", "Right" },
+    { "UpArrow", "Up" },
+    { "DownArrow", "Down" },
+  }) do
+    table.insert(keys, create_smart_keybind(binding[1], "SUPER|CTRL", { AdjustPaneSize = { binding[2], 3 } }))
+  end
+
   for _, binding in
     -- CTRL-w is the window prefix in editors, Traces, and Orc, and readline's
     -- kill-word. SUPER-w keeps pane close reachable in every context.
