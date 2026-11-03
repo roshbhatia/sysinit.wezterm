@@ -1,0 +1,55 @@
+README.md
+  s_b6baf4162ed3c9::t_faceb42abbb5e9 9,32,41,55,76
+checks/fixtures/wezterm/config.json
+  s_b6baf4162ed3c9::t_07e078b21e8757 14
+checks/test_zmx.py
+  s_b6baf4162ed3c9::t_520655bdf9c87c 1-59
+checks/wezterm.lua
+  s_b6baf4162ed3c9::t_522754b905e91e 173,179,252-253,393,430,485,700
+extras/README.md
+  s_b6baf4162ed3c9::t_d20f007e3617ec 7
+extras/zmx/README.md
+  s_b6baf4162ed3c9::t_87ac2732e003e8 1-20
+extras/zmx/default.nix
+  s_b6baf4162ed3c9::t_0d7a42e1f053fc 1-24
+extras/zmx/demo.json
+  s_b6baf4162ed3c9::t_b63a43b2871cb1 1-13
+extras/zmx/demo.sh
+  s_b6baf4162ed3c9::t_d79e69148830e4 1-4
+extras/zmx/demo.tape
+  s_b6baf4162ed3c9::t_fb74b1d1655c79 1-10
+extras/zmx/provider.json
+  s_b6baf4162ed3c9::t_ddf8d42adf0086 1-29
+extras/zmx/provider.py
+  s_b6baf4162ed3c9::t_16606e89b2e226 1-88
+flake.nix
+  s_b6baf4162ed3c9::t_740b568bf3d18f 51-54,59,85,116-126,128,162-163,174-200
+lua/sysinit/pkg/events.lua
+  s_b6baf4162ed3c9::t_0a0b0a2263551f 14
+lua/sysinit/pkg/keybindings.lua
+  s_b6baf4162ed3c9::t_d1c2dd3180b3b8 391-392
+lua/sysinit/pkg/ui.lua
+  s_b6baf4162ed3c9::t_a3c8c084d52d3c 88-91,356-357
+lua/sysinit/pkg/ui/activity.lua
+  s_b6baf4162ed3c9::t_e24822155c26ef 3
+module.nix
+  s_b6baf4162ed3c9::t_a3e09183020273 81-97
+package-index.json
+  s_b6baf4162ed3c9::t_dc6216226f5c54 4-20,39-55
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "d9cb6614dbd00b6fa1a5082bca8f208710cb3fba",
+  "prompts": {},
+  "sessions": {
+    "s_b6baf4162ed3c9": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a19cf6-a9c0-7161-abce-266a87939179",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
