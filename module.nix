@@ -33,6 +33,26 @@ in
       type = lib.types.attrs;
       default = { };
     };
+    resolvedSettings = lib.mkOption {
+      type = lib.types.attrs;
+      readOnly = true;
+      internal = true;
+      default = lib.recursiveUpdate {
+        bin = "${config.home.profileDirectory}/bin";
+        shell = [ (lib.getExe pkgs.zsh) ];
+        posixShell = lib.getExe pkgs.zsh;
+        font = {
+          monospace = "monospace";
+          symbols = "Symbols Nerd Font Mono";
+        };
+        transparency = {
+          opacity = 1.0;
+          blur = 0;
+        };
+        plugins = import ./plugins.nix { inherit pkgs; };
+        picker.command = [ (lib.getExe runner) ];
+      } cfg.settings;
+    };
     environment = lib.mkOption {
       type = lib.types.attrsOf lib.types.str;
       default = { };
@@ -78,23 +98,7 @@ in
         message = "WezTerm provider keys must be unique";
       }
     ];
-    xdg.configFile."wezterm/config.json".text = builtins.toJSON (
-      lib.recursiveUpdate {
-        bin = "${config.home.profileDirectory}/bin";
-        shell = [ (lib.getExe pkgs.zsh) ];
-        posixShell = lib.getExe pkgs.zsh;
-        font = {
-          monospace = "monospace";
-          symbols = "Symbols Nerd Font Mono";
-        };
-        transparency = {
-          opacity = 1.0;
-          blur = 0;
-        };
-        plugins = import ./plugins.nix { inherit pkgs; };
-        picker.command = [ (lib.getExe runner) ];
-      } cfg.settings
-    );
+    xdg.configFile."wezterm/config.json".text = builtins.toJSON (cfg.resolvedSettings);
     xdg.configFile."wezterm/env.json".text = builtins.toJSON cfg.environment;
   };
 }

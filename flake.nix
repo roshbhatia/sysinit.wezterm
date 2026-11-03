@@ -108,19 +108,20 @@
         system:
         let
           pkgs = nixpkgs.legacyPackages.${system};
-          standalone =
-            (module {
-              inherit pkgs;
-              lib = nixpkgs.lib;
-              config = {
-                programs.sysinit-wezterm = {
-                  enable = true;
-                  settings = { };
-                  environment = { };
-                };
-                home.profileDirectory = "/home/test/.nix-profile";
+          standaloneModule = module {
+            inherit pkgs;
+            lib = nixpkgs.lib;
+            config = {
+              programs.sysinit-wezterm = {
+                enable = true;
+                settings = { };
+                resolvedSettings = standaloneModule.options.programs.sysinit-wezterm.resolvedSettings.default;
+                environment = { };
               };
-            }).config.content;
+              home.profileDirectory = "/home/test/.nix-profile";
+            };
+          };
+          standalone = standaloneModule.config.content;
         in
         {
           wezspawn = self.packages.${system}.wezspawn;

@@ -363,7 +363,7 @@ function M.setup(config)
       left = "1cell",
       right = "1cell",
       top = "1cell",
-      bottom = "0cell",
+      bottom = "1cell",
     }
   end
 
