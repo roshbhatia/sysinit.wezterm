@@ -212,14 +212,31 @@ for _, binding in ipairs(key_config.mouse_bindings) do
   mouse[slot] = binding.action
 end
 
-local SELECTION_MODE = { "Cell", "Word", "Line" }
+local SELECTION_MODE = { "Cell", "Word", "SemanticZone" }
 for streak, mode in ipairs(SELECTION_MODE) do
   for _, mods in ipairs({ "NONE", "SHIFT" }) do
     local down = assert(mouse["Down:" .. streak .. ":" .. mods], "no press for streak " .. streak .. " " .. mods)
     local drag = assert(mouse["Drag:" .. streak .. ":" .. mods], "no drag for streak " .. streak .. " " .. mods)
     local up = assert(mouse["Up:" .. streak .. ":" .. mods], "no release for streak " .. streak .. " " .. mods)
-    assert(down.SelectTextAtMouseCursor == mode, "streak " .. streak .. " " .. mods .. " does not select " .. mode)
-    assert(drag.ExtendSelectionToMouseCursor == mode, "streak " .. streak .. " " .. mods .. " does not extend " .. mode)
+    if streak == 3 then
+      for _, marked in ipairs({ false, true }) do
+        local pane = {
+          get_semantic_zones = function(_, kind)
+            assert(kind == "Prompt", "selection does not check prompt marks")
+            return marked and { { semantic_type = "Prompt" } } or {}
+          end,
+        }
+        local performed
+        local window = { perform_action = function(_, value) performed = value end }
+        down(window, pane)
+        assert(performed.SelectTextAtMouseCursor == (marked and "SemanticZone" or "Line"))
+        drag(window, pane)
+        assert(performed.ExtendSelectionToMouseCursor == (marked and "SemanticZone" or "Line"))
+      end
+    else
+      assert(down.SelectTextAtMouseCursor == mode, "press does not select " .. mode)
+      assert(drag.ExtendSelectionToMouseCursor == mode, "drag does not extend " .. mode)
+    end
     local copies = up.CompleteSelection == "ClipboardAndPrimarySelection"
       or up.CompleteSelectionOrOpenLinkAtMouseCursor == "ClipboardAndPrimarySelection"
     assert(copies, "streak " .. streak .. " " .. mods .. " does not copy on release")
@@ -230,12 +247,8 @@ end
 assert(mouse["Up:1:NONE"].CompleteSelectionOrOpenLinkAtMouseCursor, "a bare single click stopped opening links")
 assert(mouse["Up:1:SHIFT"].CompleteSelection, "shift click opens a link instead of selecting it")
 
--- SemanticZone needs OSC 133 marks. Without them every cell keeps the default
--- Output type, the scrollback merges into one zone, and triple click takes it
--- all. Line is the mode that works with or without shell integration.
-for slot, action in pairs(mouse) do
-  assert(action.SelectTextAtMouseCursor ~= "SemanticZone", "SemanticZone is bound without OSC 133 marks: " .. slot)
-end
+assert(key_config.swallow_mouse_click_on_window_focus == false, "window activation discards selection")
+assert(key_config.swallow_mouse_click_on_pane_focus == false, "pane activation discards selection")
 
 local function key_binding(key, mods)
   for _, binding in ipairs(key_config.keys) do

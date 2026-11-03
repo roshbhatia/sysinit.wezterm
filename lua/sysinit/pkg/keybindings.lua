@@ -403,25 +403,22 @@ function M.setup(config)
 
   config.bypass_mouse_reporting_modifiers = "SHIFT"
 
-  -- Selection has to behave the same in three different panes, so the table is
-  -- generated instead of written out by hand.
-  --
-  -- A pane that grabs the mouse (Claude Code sends CSI ?1000h) never sees a
-  -- bare drag. SHIFT is how the user takes the mouse back, and WezTerm strips
-  -- bypass_mouse_reporting_modifiers before it looks the binding up, so the
-  -- gesture arrives with mods = NONE. A pane that does not grab the mouse
-  -- (Codex, a shell) keeps SHIFT in the mods when the user holds it out of
-  -- habit. Binding one set and not the other is what made shift plus double
-  -- click select a word and then copy nothing: streak 2 had a NONE entry and
-  -- no SHIFT entry, so the Up that completes the selection went unmatched.
-  --
-  -- SemanticZone is deliberately absent. It needs OSC 133 prompt marks, and
-  -- without them every cell keeps the default Output type, so the whole
-  -- scrollback merges into one zone and triple click selects all of it.
-  local SELECTION_MODE = { "Cell", "Word", "Line" }
+  config.swallow_mouse_click_on_window_focus = false
+  config.swallow_mouse_click_on_pane_focus = false
+
+  local function semantic_selection(action)
+    return wezterm.action_callback(function(window, pane)
+      -- Unmarked panes contain one Output zone spanning all scrollback.
+      local mode = #pane:get_semantic_zones("Prompt") > 0 and "SemanticZone" or "Line"
+      window:perform_action(action(mode), pane)
+    end)
+  end
+
+  local SELECTION_MODE = { "Cell", "Word", "SemanticZone" }
 
   local mouse_bindings = {}
   for streak, mode in ipairs(SELECTION_MODE) do
+    -- Mouse capture strips SHIFT, so bind both modifier states.
     for _, mods in ipairs({ "NONE", "SHIFT" }) do
       -- A bare single click still opens a link under the cursor; holding SHIFT
       -- is the way to select link text instead of following it.
@@ -432,12 +429,14 @@ function M.setup(config)
       mouse_bindings[#mouse_bindings + 1] = {
         event = { Down = { streak = streak, button = "Left" } },
         mods = mods,
-        action = act.SelectTextAtMouseCursor(mode),
+        action = streak == 3 and semantic_selection(act.SelectTextAtMouseCursor)
+          or act.SelectTextAtMouseCursor(mode),
       }
       mouse_bindings[#mouse_bindings + 1] = {
         event = { Drag = { streak = streak, button = "Left" } },
         mods = mods,
-        action = act.ExtendSelectionToMouseCursor(mode),
+        action = streak == 3 and semantic_selection(act.ExtendSelectionToMouseCursor)
+          or act.ExtendSelectionToMouseCursor(mode),
       }
       mouse_bindings[#mouse_bindings + 1] = {
         event = { Up = { streak = streak, button = "Left" } },
