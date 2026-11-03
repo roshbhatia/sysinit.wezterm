@@ -85,10 +85,7 @@ function M.setup(config)
   end
 
   local function locked_indicator()
-    if keybindings.locked_mode then
-      return "  "
-    end
-    return "  "
+    return ui_statusbar.locked_indicator(keybindings.locked_mode)
   end
 
   require("sysinit.pkg.ui.panes").configure(config_data.agents)
@@ -362,8 +359,8 @@ function M.setup(config)
     config.window_padding = {
       left = "1cell",
       right = "1cell",
-      top = "1cell",
-      bottom = "1cell",
+      top = "1.5cell",
+      bottom = "1.5cell",
     }
   end
 
