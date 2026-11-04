@@ -67,12 +67,19 @@ Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
 host. Add Shift to use the local host. These chords take priority over shell
 widgets and application bindings; locked mode passes them through.
 
-On the sysinit WezTerm fork, Cmd+Shift+F creates or toggles the tab's floating
+On the sysinit WezTerm fork, Cmd+F creates or toggles the tab's floating
 pane. Cmd+Shift+Enter creates another floating pane in the current domain and
 directory. Ctrl+H/L cycles floating panes while one is visible. Click outside
-or press Cmd+Shift+F to hide it; its process keeps running. The command palette
+or press Cmd+F to hide it; its process keeps running. The command palette
 also exposes actions to move a floating pane back to a horizontal or vertical
 split. These bindings are omitted on builds without floating-pane support.
+
+Cmd+Shift+F toggles a singleton floating shell in the local domain. The same
+process moves to the invoking tab, preserving its directory and bounded size.
+Hiding it or closing its host tab does not end the process. Cmd+F continues to
+control the tab's own floats. Separate mux servers have separate singletons.
+On Linux, use Super (the Windows key) in place of Cmd for these floating controls;
+these chords do not use the Alt modifier owned by the window manager.
 
 Cmd+Ctrl+J shrinks both floating-pane dimensions by approximately 5%; Cmd+Ctrl+K
 grows both. Scaling preserves the current proportions and stops at the shared
@@ -158,3 +165,48 @@ and [seshy](https://github.com/roshbhatia/seshy/tree/main/extras/wezterm).
 Run `nix flake check` for Lua configuration tests and picker transport tests.
 Run `nix fmt` to format tracked Nix files.
 The Home Manager module handles installation; Lua modules handle behavior; provider executables handle their own data sources.
+
+## Keyboard policy and platform audit
+
+The Ctrl pane workflow is intentional. Ctrl+G toggles locked mode, in which
+terminal shortcuts pass their original key to the application. Ctrl+G itself
+remains available to unlock. Editor and TUI passthrough rules remain in place.
+Alt is reserved for the i3-style window manager; this registry defines no Alt
+shortcuts. Terminal shortcuts remain custom where the Ctrl workflow takes
+priority over upstream defaults.
+
+| Operation | macOS | Linux |
+| --- | --- | --- |
+| Copy / paste | Cmd+C / Cmd+V | Ctrl+Shift+C / Ctrl+Shift+V |
+| New tab on current host | Cmd+T, Ctrl+T | Ctrl+Shift+T, Ctrl+T |
+| New local tab | Cmd+Shift+T, Ctrl+Shift+T | Super+Shift+T |
+| New window / local window | Cmd+N / Cmd+Shift+N | Ctrl+Shift+N / Super+Shift+N |
+| Find scrollback | Cmd+/, Ctrl+/ | Ctrl+Shift+F, Ctrl+/ |
+| Reload configuration | Cmd+R | Ctrl+Shift+R |
+| Rename tab | Cmd+Shift+R, Ctrl+Shift+R | Super+Shift+R |
+| Command palette | Cmd+Shift+P, Cmd+; | Ctrl+Shift+P, Ctrl+; |
+| Copy mode | Ctrl+Shift+X, Ctrl+Escape | Ctrl+Shift+X, Ctrl+Escape |
+| Pane selector | Cmd+Ctrl+P, Ctrl+Shift+F | Super+Ctrl+P |
+| Select tab 1–9 | Cmd+1–9, Ctrl+1–9 | Ctrl+Shift+1–9; Ctrl/Super+1–9 aliases |
+| Select terminal workspace | Cmd+Ctrl+Shift+digit; Ctrl+Shift+digit alias | Super+Ctrl+Shift+digit |
+| Fullscreen | Cmd+Ctrl+F | F11 |
+| Reset font size | Cmd+0, Ctrl+0 | Ctrl+0, Super+0 |
+| Local / global float | Cmd+F / Cmd+Shift+F | Super+F / Super+Shift+F |
+| Proportional float resize | Cmd+Ctrl+J/K | Super+Ctrl+J/K |
+| Precision pane resize | Cmd+Ctrl+arrows, Ctrl+Shift+H/J/K/L | Super+Ctrl+arrows, Ctrl+Shift+H/J/K/L |
+| Split down / right on current host | Ctrl+S / Ctrl+V | Ctrl+S / Ctrl+V |
+| Split down / right locally | Ctrl+Shift+S / Ctrl+Shift+V; Cmd+Shift+V alias | Ctrl+Shift+S / Super+Shift+V |
+| Close pane / close tab | Cmd+W / Ctrl+Shift+W | Super+W / Ctrl+Shift+W |
+
+Ctrl+H/J/K/L pane navigation, Ctrl+M zoom, Ctrl+N rotation, Ctrl+F quick select,
+Ctrl+Tab tab cycling, Ctrl+Shift+comma/period tab movement, and Ctrl+G locked
+mode keep their existing meanings. Cmd/Super+S opens the session tree;
+Cmd/Super+Shift+W/B opens the worker/bus watcher; Cmd/Super+Shift+L opens theme
+controls. These custom shortcuts remain reachable without Alt.
+
+Workspace shortcuts avoid Cmd/Super+Shift+3/4/5 screenshots on both platforms.
+The Linux map also avoids Sway's Ctrl+Shift+Left/Right workspace cycling.
+macOS application hide/minimize/quit shortcuts are not installed as Linux Super+H/M/Q actions, because Sway owns
+those keys. Linux uses Ctrl+Shift+Q to quit. The registry is checked for
+duplicate chords, Linux clipboard/search/window behavior, floating action
+selection, and locked-mode passthrough in `checks/wezterm.lua`.

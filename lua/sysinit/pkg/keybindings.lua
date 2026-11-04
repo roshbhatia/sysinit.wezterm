@@ -5,6 +5,8 @@ local utils = require("sysinit.pkg.utils")
 local M = {}
 
 M.locked_mode = false
+local IS_LINUX = wezterm.target_triple:find("linux", 1, true) ~= nil
+M.workspace_modifiers = IS_LINUX and { "SUPER|CTRL|SHIFT" } or { "CTRL|SHIFT", "SUPER|CTRL|SHIFT" }
 
 local EDITORS = { "nvim", "vim", "hx" }
 
@@ -114,7 +116,7 @@ local function get_pane_keys()
     create_smart_keybind("s", "CTRL", host_action("Down", false)),
     create_smart_keybind("v", "CTRL", host_action("Right", false)),
     create_smart_keybind("s", "CTRL|SHIFT", host_action("Down", true)),
-    create_smart_keybind("v", "CTRL|SHIFT", host_action("Right", true)),
+    create_smart_keybind("v", IS_LINUX and "SUPER|SHIFT" or "CTRL|SHIFT", host_action("Right", true)),
     -- CTRL-m is a carriage return, but nothing types it instead of Enter, and a
     -- passthrough would cost pane zoom inside an editor. Left bound on purpose.
     create_smart_keybind("m", "CTRL", act.TogglePaneZoomState),
@@ -125,7 +127,7 @@ local function get_pane_keys()
     return act.ToggleFloatingPane
   end)
   if supports_floating then
-    table.insert(keys, create_smart_keybind("f", "SUPER|SHIFT", toggle_floating))
+    table.insert(keys, create_smart_keybind("f", "SUPER", toggle_floating))
     table.insert(
       keys,
       create_smart_keybind(
@@ -136,6 +138,13 @@ local function get_pane_keys()
         })
       )
     )
+  end
+
+  local supports_global, toggle_global = pcall(function()
+    return act.ToggleGlobalFloatingPane
+  end)
+  if supports_global then
+    table.insert(keys, create_smart_keybind("f", "SUPER|SHIFT", toggle_global))
   end
 
   local supports_scaling, scale_floating = pcall(function()
@@ -249,7 +258,6 @@ local function get_system_keys()
     },
     create_smart_keybind("c", "SUPER", act.CopyTo("Clipboard")),
     create_smart_keybind("c", "CTRL|SHIFT", act.CopyTo("Clipboard")),
-    create_smart_keybind("h", "SUPER", act.HideApplication),
     create_smart_keybind(
       "k",
       "SUPER",
@@ -259,8 +267,6 @@ local function get_system_keys()
       }),
       { passthrough = EDITORS }
     ),
-    create_smart_keybind("m", "SUPER", act.Hide),
-    create_smart_keybind("q", "SUPER", act.QuitApplication),
     create_smart_keybind("v", "SUPER", act.PasteFrom("Clipboard")),
     watch_keybind("w", "no working directory", function(pane)
       local cwd = pane_cwd(pane)
@@ -308,24 +314,26 @@ local function get_tab_keys()
 
   table.insert(keys, create_smart_keybind("t", "CTRL", host_action("tab", false)))
   table.insert(keys, create_smart_keybind("t", "SUPER", host_action("tab", false)))
-  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", true)))
+  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", not IS_LINUX)))
   table.insert(keys, create_smart_keybind("t", "SUPER|SHIFT", host_action("tab", true)))
 
-  table.insert(
-    keys,
-    create_smart_keybind(
-      "r",
-      "CTRL|SHIFT",
-      act.PromptInputLine({
-        description = "Rename tab:",
-        action = wezterm.action_callback(function(win, _, line)
-          if line then
-            win:active_tab():set_title(line)
-          end
-        end),
-      })
+  if not IS_LINUX then
+    table.insert(
+      keys,
+      create_smart_keybind(
+        "r",
+        "CTRL|SHIFT",
+        act.PromptInputLine({
+          description = "Rename tab:",
+          action = wezterm.action_callback(function(win, _, line)
+            if line then
+              win:active_tab():set_title(line)
+            end
+          end),
+        })
+      )
     )
-  )
+  end
   table.insert(
     keys,
     create_smart_keybind(
@@ -350,7 +358,7 @@ local function get_tab_keys()
     for _, binding in
       ipairs(create_multi_mod_bindings(tostring(i), function()
         return tab_action
-      end))
+      end, IS_LINUX and { "CTRL", "SUPER", "CTRL|SHIFT" } or nil))
     do
       table.insert(keys, binding)
     end
@@ -374,7 +382,8 @@ local function get_search_keys()
       passthrough = EDITORS,
     }),
     create_smart_keybind("f", "CTRL", act.QuickSelect, { passthrough = TRACE_KEYS }),
-    create_smart_keybind("f", "CTRL|SHIFT", act.PaneSelect),
+    create_smart_keybind("f", "CTRL|SHIFT", IS_LINUX and act.Search("CurrentSelectionOrEmptyString") or act.PaneSelect),
+    create_smart_keybind("/", "SUPER", act.Search("CurrentSelectionOrEmptyString")),
   }
 end
 
@@ -416,6 +425,26 @@ function M.setup(config)
     get_tab_keys(),
     get_window_keys()
   )
+
+  if IS_LINUX then
+    table.insert(keys, create_smart_keybind("q", "CTRL|SHIFT", act.QuitApplication))
+    table.insert(keys, create_smart_keybind("F11", "NONE", act.ToggleFullScreen))
+    table.insert(keys, create_smart_keybind("v", "CTRL|SHIFT", act.PasteFrom("Clipboard")))
+    table.insert(keys, create_smart_keybind("n", "CTRL|SHIFT", act.SpawnWindow))
+    table.insert(keys, create_smart_keybind("r", "CTRL|SHIFT", act.ReloadConfiguration))
+  else
+    table.insert(keys, create_smart_keybind("f", "SUPER|CTRL", act.ToggleFullScreen))
+    table.insert(keys, create_smart_keybind("h", "SUPER", act.HideApplication))
+    table.insert(keys, create_smart_keybind("v", "SUPER|SHIFT", host_action("Right", true)))
+    table.insert(keys, create_smart_keybind("m", "SUPER", act.Hide))
+    table.insert(keys, create_smart_keybind("q", "SUPER", act.QuitApplication))
+  end
+  table.insert(keys, create_smart_keybind("p", "CTRL|SHIFT", act.ActivateCommandPalette))
+  table.insert(keys, create_smart_keybind("p", "SUPER|SHIFT", act.ActivateCommandPalette))
+  table.insert(keys, create_smart_keybind("p", "SUPER|CTRL", act.PaneSelect))
+  table.insert(keys, create_smart_keybind("x", "CTRL|SHIFT", act.ActivateCopyMode))
+  table.insert(keys, create_smart_keybind("0", "CTRL", act.ResetFontSize))
+  table.insert(keys, create_smart_keybind("0", "SUPER", act.ResetFontSize))
 
   -- CTRL-g is readline's abort, and it stays bound: it is the switch that turns
   -- every other binding into a passthrough, so it cannot itself pass through.

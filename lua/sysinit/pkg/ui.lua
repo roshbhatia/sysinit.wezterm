@@ -276,11 +276,9 @@ function M.setup(config)
   end
 
   config.keys = config.keys or {}
-  -- Sessions sit one SHIFT above tabs: a tab is CTRL or SUPER plus a digit, and
-  -- a session is the same chord plus SHIFT. Both mods carry it, the way the tab
-  -- digits already do.
+  -- Keep workspace digits separate from Linux tabs and both platforms' screenshots.
   for slot = DEFAULT_SLOT, MAX_SLOT do
-    for _, mods in ipairs({ "CTRL|SHIFT", "SUPER|SHIFT" }) do
+    for _, mods in ipairs(keybindings.workspace_modifiers) do
       table.insert(config.keys, {
         key = "phys:" .. tostring(slot),
         mods = mods,

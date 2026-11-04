@@ -58,6 +58,7 @@ local action = setmetatable({}, {
 })
 
 local wezterm = {
+  target_triple = "aarch64-apple-darwin",
   format = function(parts)
     last_format_parts = parts
     local text = {}
@@ -190,6 +191,7 @@ local keybindings = require("sysinit.pkg.keybindings")
 local key_config = {}
 keybindings.setup(key_config)
 assert(key_config.disable_default_key_bindings, "default keys remain enabled")
+assert(keybindings.workspace_modifiers[2] == "SUPER|CTRL|SHIFT", "macOS workspace digits collide with screenshots")
 assert(#key_config.keys >= 50, "the key registry lost bindings")
 
 local seen = {}
@@ -270,8 +272,10 @@ local floating_window = {
     self.last = action
   end,
 }
-key_binding("f", "SUPER|SHIFT").action(floating_window, {})
+key_binding("f", "SUPER").action(floating_window, {})
 assert(floating_window.last.ToggleFloatingPane ~= nil, "floating toggle does not reach the native action")
+key_binding("f", "SUPER|SHIFT").action(floating_window, {})
+assert(floating_window.last.ToggleGlobalFloatingPane ~= nil, "global toggle does not reach the singleton action")
 key_binding("Enter", "SUPER|SHIFT").action(floating_window, {})
 assert(
   floating_window.last.SpawnCommandInNewFloatingPane.domain == "CurrentPaneDomain",
@@ -1282,3 +1286,66 @@ reduced = state_rollup.reduce({
   { workspace = "mixed", status = "waiting" },
 })
 assert(reduced.mixed.status == "waiting", "working pane hid an approval request")
+
+-- Exercise the production registry and smart-key callbacks under the Linux platform.
+wezterm.target_triple = "x86_64-unknown-linux-gnu"
+package.loaded["sysinit.pkg.keybindings"] = nil
+package.loaded["sysinit.pkg.validate"] = nil
+local linux_keys = require("sysinit.pkg.keybindings")
+local linux_config = {}
+linux_keys.setup(linux_config)
+require("sysinit.pkg.validate").setup(linux_config)
+local function linux_binding(key, mods)
+  for _, binding in ipairs(linux_config.keys) do
+    if binding.key == key and binding.mods == mods then
+      return binding
+    end
+  end
+  error("missing Linux chord: " .. mods .. "+" .. key)
+end
+local linux_window = {
+  perform_action = function(self, value)
+    self.last = value
+  end,
+}
+linux_binding("v", "CTRL|SHIFT").action(linux_window, {})
+assert(linux_window.last.PasteFrom == "Clipboard", "Linux paste still splits")
+linux_binding("n", "CTRL|SHIFT").action(linux_window, {})
+assert(linux_window.last.SpawnWindow, "Linux has no standard new-window shortcut")
+linux_binding("f", "CTRL|SHIFT").action(linux_window, {})
+assert(linux_window.last.Search, "Linux find still selects a pane")
+linux_binding("r", "CTRL|SHIFT").action(linux_window, {})
+assert(linux_window.last.ReloadConfiguration, "Linux reload still renames a tab")
+linux_binding("1", "CTRL|SHIFT").action(linux_window, {})
+assert(linux_window.last.ActivateTab == 0, "Linux tab digits lost native convention")
+assert(linux_keys.workspace_modifiers[1] == "SUPER|CTRL|SHIFT", "Linux workspace digits collide with tabs/screenshots")
+for _, binding in ipairs(linux_config.keys) do
+  assert(not binding.mods:find("ALT", 1, true), "Linux binding consumes the WM modifier")
+  assert(
+    not (binding.mods == "SUPER" and (binding.key == "q" or binding.key == "h" or binding.key == "m")),
+    "Linux binding collides with Sway lifecycle shortcuts"
+  )
+end
+for _, mods in ipairs({ "SUPER", "SUPER|SHIFT" }) do
+  linux_binding("f", mods).action(linux_window, {})
+  assert(
+    linux_window.last[mods == "SUPER" and "ToggleFloatingPane" or "ToggleGlobalFloatingPane"],
+    "Linux floating action is missing"
+  )
+end
+linux_binding("g", "CTRL").action(linux_window, {})
+for _, chord in ipairs({
+  { "f", "SUPER" },
+  { "f", "SUPER|SHIFT" },
+  { "v", "CTRL|SHIFT" },
+  { "n", "CTRL|SHIFT" },
+  { "j", "SUPER|CTRL" },
+}) do
+  linux_binding(chord[1], chord[2]).action(linux_window, {})
+  assert(
+    linux_window.last.SendKey and linux_window.last.SendKey.key == chord[1],
+    "locked mode executes a terminal action"
+  )
+end
+linux_binding("g", "CTRL").action(linux_window, {})
+assert(not linux_keys.locked_mode, "locked mode cannot be exited")
