@@ -11,7 +11,7 @@ nix profile add 'github:roshbhatia/sysinit.wezterm#provider-zmx'
 
 Install the core utility separately, or select its all-provider bundle. Runtime tools still need their own credentials.
 
-Register this provider on `#`. It lists existing local Zmx sessions and can create an adjective-noun session. Attach clears inherited `ZMX_SESSION` so it cannot switch another client.
+Register this provider on `$`. It lists existing local Zmx sessions. Attach clears inherited ZMX_SESSION so it cannot switch another client.
 
 ## Demo
 
