@@ -82,7 +82,15 @@ local wezterm = {
   end,
   gui = {
     default_key_tables = function()
-      return {}
+      return {
+        copy_mode = {
+          { key = "b", mods = "NONE", action = action.CopyMode("MoveBackwardWord") },
+          { key = "b", mods = "ALT", action = action.CopyMode("MoveBackwardWord") },
+        },
+        search_mode = {
+          { key = "Escape", mods = "NONE", action = action.CopyMode("Close") },
+        },
+      }
     end,
   },
   log_error = function(message)
@@ -193,6 +201,9 @@ keybindings.setup(key_config)
 assert(key_config.disable_default_key_bindings, "default keys remain enabled")
 assert(keybindings.workspace_modifiers[2] == "SUPER|CTRL|SHIFT", "macOS workspace digits collide with screenshots")
 assert(#key_config.keys >= 50, "the key registry lost bindings")
+assert(#key_config.key_tables.copy_mode == 1, "copy mode retains a WM-owned Alt alias")
+assert(key_config.key_tables.copy_mode[1].action.CopyMode == "MoveBackwardWord", "copy mode lost Vim word navigation")
+assert(#key_config.key_tables.search_mode == 1, "search mode lost its exit shortcut")
 
 local seen = {}
 for _, binding in ipairs(key_config.keys) do

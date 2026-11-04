@@ -463,6 +463,14 @@ function M.setup(config)
   config.keys = keys
 
   config.key_tables = wezterm.gui and wezterm.gui.default_key_tables() or {}
+  for _, bindings in pairs(config.key_tables) do
+    for index = #bindings, 1, -1 do
+      local mods = bindings[index].mods
+      if mods and mods:find("ALT", 1, true) then
+        table.remove(bindings, index)
+      end
+    end
+  end
 
   config.bypass_mouse_reporting_modifiers = "SHIFT"
 

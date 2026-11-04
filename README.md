@@ -169,10 +169,12 @@ The Home Manager module handles installation; Lua modules handle behavior; provi
 ## Keyboard policy and platform audit
 
 The Ctrl pane workflow is intentional. Ctrl+G toggles locked mode, in which
-terminal shortcuts pass their original key to the application. Ctrl+G itself
+main-map shortcuts pass their original key to the application. Ctrl+G itself
 remains available to unlock. Editor and TUI passthrough rules remain in place.
-Alt is reserved for the i3-style window manager; this registry defines no Alt
-shortcuts. Terminal shortcuts remain custom where the Ctrl workflow takes
+Copy/search modes retain their native modal controls; Escape exits them.
+Alt is reserved for the i3-style window manager; the default, copy-mode, and
+search-mode tables define no Alt shortcuts. Inherited copy-mode Alt aliases
+are removed; Vim word navigation and search-mode exit keys are retained. Terminal shortcuts remain custom where the Ctrl workflow takes
 priority over upstream defaults.
 
 | Operation | macOS | Linux |
