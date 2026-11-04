@@ -1,0 +1,31 @@
+README.md
+  s_4739e15c332336::t_4deab43650beef 172,174-177
+checks/wezterm.lua
+  s_6a59011b119c6f::t_c6e2cd6cd1c634 85-93,204-206
+lua/sysinit/pkg/keybindings.lua
+  s_6a59011b119c6f::t_21206779c7eb81 466-473
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "e4d36f78db01f376c7b2a123cdabf36b4ae9671f",
+  "prompts": {},
+  "sessions": {
+    "s_4739e15c332336": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1794d-ace0-74e2-8924-c9a64b78418e",
+        "model": "gpt-6-luna"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    },
+    "s_6a59011b119c6f": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1a32a-8f2d-7b71-a53f-f90208b124f1",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
