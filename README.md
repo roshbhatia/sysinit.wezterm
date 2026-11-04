@@ -67,17 +67,12 @@ Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
 host. Add Shift to use the local host. These chords take priority over shell
 widgets and application bindings; locked mode passes them through.
 
-On the sysinit WezTerm fork, Cmd+F creates or toggles the tab's floating
-pane. Cmd+Shift+Enter creates another floating pane in the current domain and
-directory. Ctrl+H/L cycles floating panes while one is visible. Click outside
-or press Cmd+F to hide it; its process keeps running. The command palette
-also exposes actions to move a floating pane back to a horizontal or vertical
-split. These bindings are omitted on builds without floating-pane support.
-
-Cmd+Shift+F toggles a singleton floating shell in the local domain. The same
-process moves to the invoking tab, preserving its directory and bounded size.
-Hiding it or closing its host tab does not end the process. Cmd+F continues to
-control the tab's own floats. Separate mux servers have separate singletons.
+On the sysinit WezTerm fork, Cmd+F creates or toggles one floating pane owned
+by the current tab. Click outside or press Cmd+F to hide it; its process keeps
+running. Each tab keeps its own shell and directory. There is no global floating
+shortcut or shortcut to create additional floats. The command palette also
+exposes actions to move a floating pane back to a horizontal or vertical split.
+The toggle is omitted on builds without floating-pane support.
 On Linux, use Super (the Windows key) in place of Cmd for these floating controls;
 these chords do not use the Alt modifier owned by the window manager.
 
@@ -89,9 +84,8 @@ Ctrl+Shift+H/L and K/J pane-resize chords also work at a shell prompt. Resizing
 keeps the floating pane centered and preserves its size when hidden and restored.
 
 The parent tab keeps its underlying pane's directory label. An F badge indicates
-one floating pane; F2, F3, and so on show the total when there are several. The
-badge uses the accent color while a float is visible in the selected tab, and a
-muted color when hidden or in another tab. Floats use an opaque background, a
+a floating pane. The badge uses the accent color while a float is visible in the
+selected tab, and a muted color when hidden or in another tab. Floats use an opaque background, a
 thin theme-accent border, and an even content inset. The window title follows
 the focused process.
 
@@ -193,7 +187,7 @@ priority over upstream defaults.
 | Select terminal workspace | Cmd+Ctrl+Shift+digit; Ctrl+Shift+digit alias | Super+Ctrl+Shift+digit |
 | Fullscreen | Cmd+Ctrl+F | F11 |
 | Reset font size | Cmd+0, Ctrl+0 | Ctrl+0, Super+0 |
-| Local / global float | Cmd+F / Cmd+Shift+F | Super+F / Super+Shift+F |
+| Toggle tab-local float | Cmd+F | Super+F |
 | Proportional float resize | Cmd+Ctrl+J/K | Super+Ctrl+J/K |
 | Precision pane resize | Cmd+Ctrl+arrows, Ctrl+Shift+H/J/K/L | Super+Ctrl+arrows, Ctrl+Shift+H/J/K/L |
 | Split down / right on current host | Ctrl+S / Ctrl+V | Ctrl+S / Ctrl+V |

@@ -128,23 +128,6 @@ local function get_pane_keys()
   end)
   if supports_floating then
     table.insert(keys, create_smart_keybind("f", "SUPER", toggle_floating))
-    table.insert(
-      keys,
-      create_smart_keybind(
-        "Enter",
-        "SUPER|SHIFT",
-        act.SpawnCommandInNewFloatingPane({
-          domain = "CurrentPaneDomain",
-        })
-      )
-    )
-  end
-
-  local supports_global, toggle_global = pcall(function()
-    return act.ToggleGlobalFloatingPane
-  end)
-  if supports_global then
-    table.insert(keys, create_smart_keybind("f", "SUPER|SHIFT", toggle_global))
   end
 
   local supports_scaling, scale_floating = pcall(function()

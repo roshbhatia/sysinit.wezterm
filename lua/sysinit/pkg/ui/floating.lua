@@ -42,7 +42,7 @@ function M.badge(tab, palette)
   if not ok or not count or count == 0 then
     return ""
   end
-  local label = " F" .. (count > 1 and tostring(count) or "")
+  local label = " F"
   local color = visible and tab.is_active and palette.accent or palette.muted
   return wezterm.format({
     { Foreground = { Color = color } },

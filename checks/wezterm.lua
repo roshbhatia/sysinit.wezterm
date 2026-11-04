@@ -285,13 +285,10 @@ local floating_window = {
 }
 key_binding("f", "SUPER").action(floating_window, {})
 assert(floating_window.last.ToggleFloatingPane ~= nil, "floating toggle does not reach the native action")
-key_binding("f", "SUPER|SHIFT").action(floating_window, {})
-assert(floating_window.last.ToggleGlobalFloatingPane ~= nil, "global toggle does not reach the singleton action")
-key_binding("Enter", "SUPER|SHIFT").action(floating_window, {})
-assert(
-  floating_window.last.SpawnCommandInNewFloatingPane.domain == "CurrentPaneDomain",
-  "floating spawn loses the current domain"
-)
+for _, binding in ipairs(key_config.keys) do
+  assert(not (binding.key == "f" and binding.mods == "SUPER|SHIFT"), "global float shortcut remains enabled")
+  assert(not (binding.key == "Enter" and binding.mods == "SUPER|SHIFT"), "additional float shortcut remains enabled")
+end
 for key, direction in pairs({ LeftArrow = "Left", RightArrow = "Right", UpArrow = "Up", DownArrow = "Down" }) do
   key_binding(key, "SUPER|CTRL").action(floating_window, {})
   assert(floating_window.last.AdjustPaneSize[1] == direction, "resize chord uses the wrong direction")
@@ -318,16 +315,16 @@ assert(
   "floating cwd replaced parent tab identity"
 )
 local palette = { accent = "accent", muted = "muted", normal = "normal" }
-assert(floating_ui.badge(float_tab, palette) == " F2", "float count badge is missing")
+assert(floating_ui.badge(float_tab, palette) == " F", "floating badge is missing")
 assert(last_format_parts[1].Foreground.Color == "accent", "visible float badge is not highlighted")
 float_tab.is_active = false
 assert(
-  floating_ui.badge(float_tab, palette) == " F2" and last_format_parts[1].Foreground.Color == "muted",
+  floating_ui.badge(float_tab, palette) == " F" and last_format_parts[1].Foreground.Color == "muted",
   "inactive tabs advertise a focused float"
 )
 float_tab.is_active = true
 float_tab.floating_pane_visible = false
-assert(floating_ui.badge(float_tab, palette) == " F2", "hidden floats disappeared from their owner tab")
+assert(floating_ui.badge(float_tab, palette) == " F", "hidden floats disappeared from their owner tab")
 assert(last_format_parts[1].Foreground.Color == "muted", "hidden float badge is not subdued")
 float_tab.floating_pane_count = 0
 assert(floating_ui.badge(float_tab, palette) == "", "normal tabs gained a floating badge")
@@ -1337,17 +1334,18 @@ for _, binding in ipairs(linux_config.keys) do
     "Linux binding collides with Sway lifecycle shortcuts"
   )
 end
-for _, mods in ipairs({ "SUPER", "SUPER|SHIFT" }) do
-  linux_binding("f", mods).action(linux_window, {})
+linux_binding("f", "SUPER").action(linux_window, {})
+assert(linux_window.last.ToggleFloatingPane, "Linux tab-local floating action is missing")
+for _, binding in ipairs(linux_config.keys) do
+  assert(not (binding.key == "f" and binding.mods == "SUPER|SHIFT"), "Linux global float shortcut remains enabled")
   assert(
-    linux_window.last[mods == "SUPER" and "ToggleFloatingPane" or "ToggleGlobalFloatingPane"],
-    "Linux floating action is missing"
+    not (binding.key == "Enter" and binding.mods == "SUPER|SHIFT"),
+    "Linux additional float shortcut remains enabled"
   )
 end
 linux_binding("g", "CTRL").action(linux_window, {})
 for _, chord in ipairs({
   { "f", "SUPER" },
-  { "f", "SUPER|SHIFT" },
   { "v", "CTRL|SHIFT" },
   { "n", "CTRL|SHIFT" },
   { "j", "SUPER|CTRL" },
