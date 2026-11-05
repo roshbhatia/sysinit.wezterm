@@ -119,6 +119,10 @@ function M.program_state(p)
 end
 
 function M.agent_state(p, deck_states, record, now)
+  local program_status, program_reason, program_since, program_app, program_source = M.program_state(p)
+  if program_status then
+    return program_status, program_reason, program_since, program_app, program_source
+  end
   now = now or os.time()
   local id = p.pane_id and p:pane_id() or p
   local previous = history[id] or {}

@@ -108,12 +108,25 @@ pane.get_program_status = function()
 end
 local status, reason, _, agent, source = panes.program_state(pane)
 assert(status == "waiting" and reason == "Approve tests?" and agent == "cargo" and source == "osc7501")
+proc = { pid = 99, executable = "/bin/zsh" }
+status, reason, _, agent, source = state(done)
+assert(
+  status == "waiting" and reason == "Approve tests?" and agent == "cargo" and source == "osc7501",
+  "session tree reader ignored OSC status from a non-agent program"
+)
 records = { { id = "", state = "error", msg = "Build failed" } }
 assert(panes.program_state(pane) == "waiting")
+assert(state(done) == "waiting", "OSC error was hidden by stale agent state")
+records = { { id = "", state = "working", app = "cargo" } }
+assert(state(done) == "working", "OSC working state did not reach session tree reader")
 records = {}
 assert(panes.program_state(pane) == nil)
+assert(state(done) == nil, "cleared OSC retained program state on a shell")
+reset()
+assert(state(done) == "done", "cleared OSC did not restore agent fallback")
 pane.get_program_status = nil
 assert(panes.program_state(pane) == nil)
+assert(state(done) == "done", "upstream terminal did not retain agent fallback")
 print("OSC 7501 program status precedence and upstream fallback passed")
 
 local upstream_pane = setmetatable({}, {
@@ -122,3 +135,76 @@ local upstream_pane = setmetatable({}, {
   end,
 })
 assert(panes.program_state(upstream_pane) == nil, "upstream userdata must retain agent status fallback")
+
+pane.get_program_status = function()
+  return { { id = "build", state = "blocked", app = "cargo", msg = "Approve tests?" } }
+end
+pane.get_current_working_dir = function()
+  return "file:///work/project"
+end
+pane.get_domain_name = function()
+  return "local"
+end
+proc = { pid = 99, executable = "/bin/zsh" }
+local tab = {
+  tab_id = function()
+    return 2
+  end,
+  panes_with_info = function()
+    return { { pane = pane, is_active = true } }
+  end,
+}
+local window = {
+  get_workspace = function()
+    return "build"
+  end,
+  window_id = function()
+    return 1
+  end,
+  tabs = function()
+    return { tab }
+  end,
+}
+package.loaded["session_tree.sessions"] = {
+  last_active = function()
+    return 0
+  end,
+  ordered_windows = function()
+    return { window }
+  end,
+}
+panes.read_pane_record = function()
+  return nil
+end
+require("session_tree.options").configure({
+  adapters = {
+    panes = panes,
+    format = {
+      tab_label = function()
+        return "build"
+      end,
+      pane_proc = function(_, app)
+        return app
+      end,
+    },
+  },
+})
+local tree = require("session_tree.session_tree").build({})
+local row = tree.workspaces[1].tabs[1].panes[1]
+assert(
+  row.status == "waiting" and row.agent == "cargo" and row.reason == "Approve tests?",
+  "session switcher pane row lost OSC status"
+)
+assert(
+  tree.workspaces[1].status == "waiting" and #tree.attention == 1,
+  "OSC blocker did not reach workspace status and attention list"
+)
+pane.get_program_status = function()
+  return {}
+end
+tree = require("session_tree.session_tree").build({})
+assert(
+  tree.workspaces[1].tabs[1].panes[1].status == nil and #tree.attention == 0,
+  "cleared OSC remained in session switcher"
+)
+print("OSC 7501 session switcher rows and attention passed")
