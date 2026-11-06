@@ -32,6 +32,7 @@ let
     name = "wezterm-remote";
     text = ''
       mkdir -p ${lib.escapeShellArg "${config.home.homeDirectory}/.local/state/wezterm"}
+      export WEZTERM_UNIX_SOCKET=${lib.escapeShellArg socketPath}
       exec ${pkgs.wezterm}/bin/wezterm --config-file ${muxConfig} "$@"
     '';
   };
