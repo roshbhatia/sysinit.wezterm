@@ -1,0 +1,19 @@
+patches/resurrect-domains.patch
+  s_fc5138a7686b50::t_cffa946235ceb7 4,10,13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "575aa9ede0f6932d1f1d38542c069c7ca2fe7f5c",
+  "prompts": {},
+  "sessions": {
+    "s_fc5138a7686b50": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1acc4-2dc6-7760-9eae-12ebbd0f80c9",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
