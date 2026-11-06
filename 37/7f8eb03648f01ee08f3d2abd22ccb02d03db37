@@ -1,0 +1,21 @@
+lua/sysinit/pkg/core.lua
+  s_de8d39c3c56992::t_f5e628b5266c85 22
+checks/composition.lua
+  s_de8d39c3c56992::t_f5e628b5266c85 4,19,37-40
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "377f8eb03648f01ee08f3d2abd22ccb02d03db37",
+  "prompts": {},
+  "sessions": {
+    "s_de8d39c3c56992": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ad25-3528-7c81-a954-276c13dcabf6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
