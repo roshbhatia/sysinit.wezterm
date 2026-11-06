@@ -91,6 +91,12 @@ function M.capture()
   return session
 end
 
+local function write_snapshot(path, state)
+  local staged = path .. "." .. wezterm.procinfo.pid()
+  assert(file_io.write_file(staged, wezterm.json_encode(state)))
+  assert(file_io.move_file(staged, path))
+end
+
 function M.save()
   if busy or not ready then
     return false
@@ -110,10 +116,11 @@ function M.save()
       return
     end
     local path = settings.state_dir .. "/session.json"
-    if read_session(path) then
-      assert(file_io.move_file(path, path .. ".bak"))
+    local previous = read_session(path)
+    if previous then
+      write_snapshot(path .. ".bak", previous)
     end
-    assert(file_io.write_file(path, wezterm.json_encode(state)))
+    write_snapshot(path, state)
   end)
   if not ok then
     report(err)

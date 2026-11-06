@@ -11,6 +11,7 @@ local fake = {
   home_dir = "/home/fixture",
   json_parse = native.json_parse,
   json_encode = native.json_encode,
+  procinfo = native.procinfo,
   run_child_process = native.run_child_process,
   emit = function() end,
   log_warn = function(message)
