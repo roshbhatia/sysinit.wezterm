@@ -115,7 +115,8 @@ function M.setup(config)
     return "  "
   end
 
-  require("sysinit.pkg.ui.panes").configure(config_data.agents)
+  local ui_panes = require("sysinit.pkg.ui.panes")
+  ui_panes.configure(config_data.agents)
 
   local agent_deck_ok, agent_deck = plugin_loader.load("agent-deck")
   if not agent_deck_ok then
@@ -513,7 +514,8 @@ function M.setup(config)
       local window = wezterm.mux.get_window(tab.window_id)
       workspace = window and window:get_workspace() or ""
     end)
-    return ui_windowtitle.format(tab, pane, workspace, config_data.agentIdentity)
+    local active = (tab and tab.active_pane) or pane or {}
+    return ui_windowtitle.format(tab, pane, workspace, config_data.agentIdentity, ui_panes.latest_agent(active.pane_id))
   end)
 
   local hyperlink_rules = wezterm.default_hyperlink_rules()

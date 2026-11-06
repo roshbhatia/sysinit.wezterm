@@ -957,6 +957,14 @@ local native_title = windowtitle.format(nil, {
 }, "review", { claude = { label = "Claude Code" }, codex = { label = "Codex" } })
 assert(native_title == "Claude Code · review · Named conversation", "native task context was replaced by tool status")
 wezterm.mux.get_pane = original_get_pane
+local observed_title = windowtitle.format(nil, {
+  foreground_process_name = "/profile/bin/agent",
+  title = "Review the cache",
+}, "review", { cursor = { label = "Cursor" } }, "cursor")
+assert(
+  observed_title == "Cursor · review · Review the cache",
+  "registry detection was replaced by a generic executable name"
+)
 local escaped = string.char(0x1b) .. "[31mred" .. string.char(0x1b) .. "[0m"
 local hostile_title = windowtitle.format({
   active_pane = {

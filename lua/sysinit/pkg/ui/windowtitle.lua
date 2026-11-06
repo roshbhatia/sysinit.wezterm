@@ -81,7 +81,7 @@ local function metadata(pane, process, session, directory)
   return title
 end
 
-function M.format(tab, pane, session, identities)
+function M.format(tab, pane, session, identities, observed_agent)
   local active = (tab and tab.active_pane) or pane or {}
   local process = ui_format.normalize_proc(basename(active.foreground_process_name)) or ""
   local workspace = clean(session)
@@ -95,15 +95,18 @@ function M.format(tab, pane, session, identities)
       local records = object and object:get_program_status() or {}
       for index = #records, 1, -1 do
         local record = records[index]
+        if clean(record.app) ~= "" then
+          protocol_agent = protocol_agent or clean(record.app)
+        end
         if clean(record.title) ~= "" then
-          protocol_agent, protocol_title = clean(record.app), clean(record.title)
+          protocol_title = clean(record.title)
           break
         end
       end
     end)
   end
   identities = identities or {}
-  local identity = identities[agent] or identities[process] or identities[protocol_agent]
+  local identity = identities[observed_agent] or identities[agent] or identities[process] or identities[protocol_agent]
   local label = identity and clean(identity.label) or process
   if details == "" then
     details = protocol_title or ""

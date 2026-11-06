@@ -84,6 +84,10 @@ function M.latest(id)
   return history[id] and history[id].status
 end
 
+function M.latest_agent(id)
+  return history[id] and history[id].agent
+end
+
 function M.configure(specs)
   agents = specs or {}
   history = {}
