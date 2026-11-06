@@ -1,0 +1,28 @@
+checks/wezterm.lua
+  s_de8d39c3c56992::t_33d3bd257efed7 960-964
+  s_de8d39c3c56992::t_1bb931ae0747f6 965-967
+lua/sysinit/pkg/ui/windowtitle.lua
+  s_de8d39c3c56992::t_33d3bd257efed7 84,98-100,102,109
+lua/sysinit/pkg/ui.lua
+  s_de8d39c3c56992::t_bef2a6350b1ac8 118-119
+  s_de8d39c3c56992::t_33d3bd257efed7 518
+  s_de8d39c3c56992::t_728d1e1f356361 517
+lua/sysinit/pkg/ui/panes.lua
+  s_de8d39c3c56992::t_33d3bd257efed7 87-90
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "b6c619ff9a1ebf3206fc385508adf7a20f7b0c90",
+  "prompts": {},
+  "sessions": {
+    "s_de8d39c3c56992": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ad25-3528-7c81-a954-276c13dcabf6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
