@@ -1,0 +1,18 @@
+diff --git a/plugin/resurrect/pane_tree.lua b/plugin/resurrect/pane_tree.lua
+--- a/plugin/resurrect/pane_tree.lua
++++ b/plugin/resurrect/pane_tree.lua
+@@ -184,2 +184,2 @@
+-		if domain == "local" then
++		if domain == "local" and pub.capture_text ~= false then
+ 			-- pane:inject_output() is unavailable for non-local domains,
+diff --git a/plugin/resurrect/tab_state.lua b/plugin/resurrect/tab_state.lua
+--- a/plugin/resurrect/tab_state.lua
++++ b/plugin/resurrect/tab_state.lua
+@@ -56,2 +56,2 @@
+-			local split_args = { direction = "Right", cwd = right.cwd }
++			local split_args = { direction = "Right", cwd = right.cwd, domain = right.domain and { DomainName = right.domain } or nil }
+ 			local right_span = span_width(right)
+@@ -67,2 +67,2 @@
+-			local split_args = { direction = "Bottom", cwd = bottom.cwd }
++			local split_args = { direction = "Bottom", cwd = bottom.cwd, domain = bottom.domain and { DomainName = bottom.domain } or nil }
+ 			local bottom_span = span_height(bottom)

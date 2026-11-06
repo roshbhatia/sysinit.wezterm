@@ -15,7 +15,7 @@ package.loaded["sysinit.pkg.utils"] = {
     if path == "env.json" then
       return env
     end
-    return { posixShell = "/profile/bin/zsh" }
+    return { posixShell = "/profile/bin/zsh", unsetEnvironmentVariables = { "NO_COLOR" } }
   end,
 }
 package.loaded.wezterm = {
@@ -32,6 +32,7 @@ require("sysinit.pkg.core").setup(config)
 assert(config.set_environment_variables.EXTRA == "a b")
 assert(config.set_environment_variables.TERM == "custom-term")
 assert(config.set_environment_variables.SHELL == "/profile/bin/zsh")
+assert(config.unset_environment_variables[1] == "NO_COLOR")
 assert(env.SHELL == nil, "the source environment was mutated")
 local domains = require("sysinit.pkg.domains").ssh()
 local by_name = {}

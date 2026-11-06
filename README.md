@@ -14,6 +14,36 @@ Each plugin also supports plain Lua installation without this configuration.
 The tree shows running workspaces, tabs, and panes.
 Provider shortcuts open another selector without adding inactive entries to the tree.
 
+## Session recovery
+
+Set `programs.sysinit-wezterm.persistence.enable = true` to enable a persistent
+local Unix mux and whole-session snapshots. Normal application startup reattaches
+to surviving processes. When the mux has restarted, recovery rebuilds the saved
+workspaces, windows, split layouts, directories, active workspace, and tab-local
+floating panes. Explicit launch commands open their requested context.
+
+Snapshots contain layout metadata, not terminal output or commands to replay.
+Applications need their own resume support after the host running them reboots.
+The snapshot is saved on focus changes and every 60 seconds, with an atomic write
+and a previous-snapshot backup. Unreachable remote workspaces remain in the saved
+session for a later restore. Existing workspace-manager snapshots remain intact.
+
+The command palette provides `Session: save recovery snapshot`, `Session: restore
+last session`, and `Session: restore saved workspace`. The live session tree and
+the seshy and zmx providers retain their existing ownership.
+
+Set `programs.sysinit-wezterm.persistence.service = true` on managed remote hosts
+to run the mux as a systemd user service or macOS LaunchAgent. Linux hosts also
+need user lingering. Point the corresponding SSH domains' `remote_wezterm_path`
+at `wezterm-remote`, the generated wrapper for the headless configuration. Use the
+same WezTerm fork revision on clients and servers. Stop the service only when its
+running jobs can end.
+
+Recovery uses the Nix-pinned
+[StephenGemin/resurrect.wezterm](https://github.com/StephenGemin/resurrect.wezterm)
+serializer and split restoration, with adapters for whole sessions and floating
+panes. Its built-in UI and timers are replaced by this configuration's integration.
+
 ## Nix
 
 Add `github:roshbhatia/sysinit.wezterm` as a flake input and import its `homeManagerModules.default` output.

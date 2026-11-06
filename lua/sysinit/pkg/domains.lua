@@ -54,6 +54,11 @@ local function ssh_key_options()
 end
 
 function M.ssh()
+  local config_data = utils.load_json_file(utils.get_config_path("config.json"))
+  local persistent_hosts = {}
+  for _, host in ipairs(config_data.persistentRemoteHosts or {}) do
+    persistent_hosts[host] = true
+  end
   local key_options = ssh_key_options()
   local domains = {}
   local seen = {}
@@ -80,6 +85,8 @@ function M.ssh()
       multiplexing = "WezTerm",
       assume_shell = "Posix",
       ssh_option = options,
+      remote_wezterm_path = persistent_hosts[host] and "wezterm-remote" or nil,
+      timeout = persistent_hosts[host] and 7 or nil,
     })
   end
 

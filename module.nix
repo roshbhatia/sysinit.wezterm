@@ -11,6 +11,30 @@
 }:
 let
   cfg = config.programs.sysinit-wezterm;
+  stateDir = "${config.home.homeDirectory}/.local/state/wezterm/recovery";
+  socketPath = "${config.home.homeDirectory}/.local/state/wezterm/mux.sock";
+  muxConfig = pkgs.writeText "wezterm-mux.lua" ''
+    local wezterm = require("wezterm")
+    return {
+      unix_domains = { { name = "unix", socket_path = ${builtins.toJSON socketPath} } },
+      default_prog = wezterm.json_parse(${
+        builtins.toJSON (builtins.toJSON (cfg.settings.shell or [ (lib.getExe pkgs.zsh) ]))
+      }),
+      set_environment_variables = wezterm.json_parse(${builtins.toJSON (builtins.toJSON cfg.environment)}),
+      scrollback_lines = 3500,
+      unset_environment_variables = wezterm.json_parse(${
+        builtins.toJSON (builtins.toJSON (cfg.settings.unsetEnvironmentVariables or [ ]))
+      }),
+      mux_server_spawn_initial_tab = false,
+    }
+  '';
+  remoteClient = pkgs.writeShellApplication {
+    name = "wezterm-remote";
+    text = ''
+      mkdir -p ${lib.escapeShellArg "${config.home.homeDirectory}/.local/state/wezterm"}
+      exec ${pkgs.wezterm}/bin/wezterm --config-file ${muxConfig} "$@"
+    '';
+  };
   luaSource = import ./lua-source.nix {
     inherit
       pkgs
@@ -29,6 +53,10 @@ in
 {
   options.programs.sysinit-wezterm = {
     enable = lib.mkEnableOption "the terminal configuration";
+    persistence = {
+      enable = lib.mkEnableOption "session snapshots and a persistent local mux";
+      service = lib.mkEnableOption "a managed remote mux service";
+    };
     settings = lib.mkOption {
       type = lib.types.attrs;
       default = { };
@@ -39,6 +67,38 @@ in
     };
   };
   config = lib.mkIf cfg.enable {
+    home.packages = lib.optional cfg.persistence.enable remoteClient;
+    home.activation.weztermMuxDirectory = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      run mkdir -p ${lib.escapeShellArg "${config.home.homeDirectory}/.local/state/wezterm"}
+    '';
+    systemd.user.services = lib.optionalAttrs (cfg.persistence.service && pkgs.stdenv.isLinux) {
+      wezterm-mux = {
+        Unit.Description = "Persistent WezTerm mux";
+        Service = {
+          ExecStart = "${pkgs.wezterm}/bin/wezterm-mux-server --config-file ${muxConfig}";
+          Restart = "on-failure";
+          RestartSec = 5;
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
+    };
+    launchd.agents = lib.optionalAttrs (cfg.persistence.service && pkgs.stdenv.isDarwin) {
+      wezterm-mux = {
+        enable = true;
+        config = {
+          Label = "com.roshbhatia.wezterm-mux";
+          ProgramArguments = [
+            "${pkgs.wezterm}/bin/wezterm-mux-server"
+            "--config-file"
+            (toString muxConfig)
+          ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          StandardOutPath = "${config.home.homeDirectory}/.local/state/wezterm/mux.log";
+          StandardErrorPath = "${config.home.homeDirectory}/.local/state/wezterm/mux.log";
+        };
+      };
+    };
     programs.wezterm = {
       enable = true;
       enableZshIntegration = true;
@@ -92,6 +152,15 @@ in
           blur = 0;
         };
         plugins = import ./plugins.nix { inherit pkgs; };
+        localDomain = if cfg.persistence.enable then "unix" else "local";
+        persistence = {
+          inherit (cfg.persistence) enable;
+          state_dir = stateDir;
+          socket_path = socketPath;
+          mux_config = toString muxConfig;
+          mux_binary = "${pkgs.wezterm}/bin/wezterm-mux-server";
+          interval = 60;
+        };
         picker.command = [ (lib.getExe runner) ];
       } cfg.settings
     );

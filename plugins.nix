@@ -1,4 +1,13 @@
 { pkgs }: {
+  resurrect = pkgs.applyPatches {
+    src = pkgs.fetchFromGitHub {
+      owner = "StephenGemin";
+      repo = "resurrect.wezterm";
+      rev = "f40db0c62742fdaa212c17cc449d3f52d74fce1a";
+      hash = "sha256-UTfa4mxPz4l/PbVUY7gfYLRJe5X+UOTZwfSWt2gqd+E=";
+    };
+    patches = [ ./patches/resurrect-domains.patch ];
+  };
   tabline = pkgs.fetchFromGitHub {
     owner = "michaelbrusegard";
     repo = "tabline.wez";

@@ -122,8 +122,13 @@
                   enable = true;
                   settings = { };
                   environment = { };
+                  persistence = {
+                    enable = false;
+                    service = false;
+                  };
                 };
                 home.profileDirectory = "/home/test/.nix-profile";
+                home.homeDirectory = "/home/test";
               };
             }).config.content;
         in
@@ -152,6 +157,10 @@
                     SYSINIT_WEZTERM_LUA=${luaFor pkgs} PICKER_TEST_MARKER="$TMPDIR/picker-passed" wezterm --config-file ${./checks/picker_global.lua} show-keys --lua > /dev/null 2> picker.log
                     cat picker.log
                     test "$(cat "$TMPDIR/picker-passed")" = passed
+                    mkdir -p "$TMPDIR/recovery"
+                    SYSINIT_WEZTERM_LUA=${luaFor pkgs} RECOVERY_TEST_STATE="$TMPDIR/recovery" wezterm --config-file ${./checks/recovery_native.lua} show-keys --lua > /dev/null 2> recovery.log
+                    cat recovery.log
+                    test "$(cat "$TMPDIR/recovery/passed")" = passed
                     touch $out
               '';
           lua =

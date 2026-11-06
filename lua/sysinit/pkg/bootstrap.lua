@@ -36,11 +36,18 @@ function M.build()
 
   local utils = require("sysinit.pkg.utils")
   local settings = utils.load_json_file(utils.get_config_path("config.json"))
+  local persistence = settings.persistence or {}
+  local recovery = persistence.enable and require("sysinit.pkg.recovery") or nil
+  local local_domain = persistence.enable and "unix" or "local"
+  settings.spawn = settings.spawn or {}
+  settings.spawn.local_domain = local_domain
   require("spawn_plugin").apply_to_config(config, settings.spawn or {})
   require("session_tree.options").configure({
     picker = settings.picker,
     passthrough_procs = settings.passthrough_procs,
     shell = settings.shell,
+    local_domain = local_domain,
+    recovery = persistence.enable and recovery or nil,
     home = utils.get_home_dir(),
     binding = { key = "s", mods = "SUPER" },
     locked = function()
@@ -54,6 +61,9 @@ function M.build()
     },
   })
   require("sysinit.pkg.core").setup(config)
+  if persistence.enable then
+    recovery.setup(config, persistence)
+  end
 
   local failures = {}
   for _, name in ipairs(OPTIONAL) do

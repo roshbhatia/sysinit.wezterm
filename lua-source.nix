@@ -4,6 +4,9 @@
   spawn,
   smart-keys,
 }:
+let
+  plugins = import ./plugins.nix { inherit pkgs; };
+in
 pkgs.runCommand "sysinit-wezterm-lua" { } ''
   mkdir -p $out
   cp -r ${./lua}/. $out/
@@ -11,4 +14,5 @@ pkgs.runCommand "sysinit-wezterm-lua" { } ''
   ln -s ${session-tree}/plugin/init.lua $out/session_tree_plugin.lua
   ln -s ${smart-keys}/plugin/init.lua $out/smart_keys_plugin.lua
   ln -s ${spawn}/plugin/init.lua $out/spawn_plugin.lua
+  ln -s ${plugins.resurrect}/plugin/resurrect $out/resurrect
 ''
