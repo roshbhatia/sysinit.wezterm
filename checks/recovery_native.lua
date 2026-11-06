@@ -6,6 +6,7 @@ local windows, events, timers, operations = {}, {}, {}, {}
 local active = "beta"
 local attached = false
 local serial = 0
+local connection_window
 local fake = {
   GLOBAL = { workspace_slots = { alpha = 2, beta = 3 } },
   home_dir = "/home/fixture",
@@ -182,6 +183,11 @@ local function make_window(workspace, domain, cwd)
 end
 fake.mux = {
   all_windows = function()
+    if connection_window then
+      local temporary = connection_window
+      connection_window = nil
+      return { temporary }
+    end
     return windows
   end,
   get_active_workspace = function()
@@ -193,7 +199,7 @@ fake.mux = {
   get_domain = function(name)
     return {
       is_spawnable = function()
-        return true
+        return name ~= "TermWizTerminalDomain"
       end,
       state = function()
         return attached and "Attached" or "Detached"
@@ -245,6 +251,7 @@ assert(#snapshot.workspaces == 2, "inactive workspace was not saved")
 assert(snapshot.workspaces[1].window_states[1].tabs[1].floating.width == 35, "hidden float was not saved")
 assert(snapshot.workspaces[1].window_states[1].tabs[1].pane_tree.text == nil, "terminal output was saved")
 windows, attached = {}, false
+connection_window = make_window("alpha", "TermWizTerminalDomain", "/")
 assert(recovery.restore())
 assert(
   #windows == 2 and windows[1].selected.positions[1].pane.domain == "unix",

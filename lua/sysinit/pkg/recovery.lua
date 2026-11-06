@@ -259,7 +259,14 @@ function M.restore(selected_workspace)
   end
   local live = {}
   for _, window in ipairs(wezterm.mux.all_windows()) do
-    live[window:get_workspace()] = true
+    for _, info in ipairs(window:tabs_with_info()) do
+      local pane = info.tab:active_pane()
+      local domain = pane and wezterm.mux.get_domain(pane:get_domain_name())
+      if domain and domain:is_spawnable() then
+        live[window:get_workspace()] = true
+        break
+      end
+    end
   end
   local ok, err = pcall(function()
     for _, workspace in ipairs(state.workspaces) do
