@@ -19,7 +19,7 @@ local function get_basic_config()
     custom_shaders_animation_duration_ms = settings.customShadersAnimationDurationMs,
     default_prog = settings.shell or { nix_zsh },
     set_environment_variables = environment,
-    unset_environment_variables = settings.unsetEnvironmentVariables,
+    unset_environment_variables = not (settings.persistence or {}).enable and settings.unsetEnvironmentVariables or nil,
   }
 end
 

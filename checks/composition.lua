@@ -1,6 +1,7 @@
 package.path = assert(arg[1]) .. "/?.lua;" .. package.path
 local home = assert(arg[2])
 local env = { PATH = "/profile/bin", EXTRA = "a b", TERM = "custom-term" }
+local settings = { posixShell = "/profile/bin/zsh", unsetEnvironmentVariables = { "NO_COLOR" } }
 package.loaded["sysinit.pkg.utils"] = {
   get_home_dir = function()
     return home
@@ -15,7 +16,7 @@ package.loaded["sysinit.pkg.utils"] = {
     if path == "env.json" then
       return env
     end
-    return { posixShell = "/profile/bin/zsh", unsetEnvironmentVariables = { "NO_COLOR" } }
+    return settings
   end,
 }
 package.loaded.wezterm = {
@@ -33,6 +34,10 @@ assert(config.set_environment_variables.EXTRA == "a b")
 assert(config.set_environment_variables.TERM == "custom-term")
 assert(config.set_environment_variables.SHELL == "/profile/bin/zsh")
 assert(config.unset_environment_variables[1] == "NO_COLOR")
+settings.persistence = { enable = true }
+local persistent = {}
+require("sysinit.pkg.core").setup(persistent)
+assert(persistent.unset_environment_variables == nil, "persistent panes inherit the mux server environment policy")
 assert(env.SHELL == nil, "the source environment was mutated")
 local domains = require("sysinit.pkg.domains").ssh()
 local by_name = {}
