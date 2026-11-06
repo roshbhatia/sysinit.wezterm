@@ -1,4 +1,5 @@
 local ui_format = require("sysinit.pkg.ui.format")
+local wezterm = require("wezterm")
 
 local M = {}
 
@@ -80,15 +81,36 @@ local function metadata(pane, process, session, directory)
   return title
 end
 
-function M.format(tab, pane, session)
+function M.format(tab, pane, session, identities)
   local active = (tab and tab.active_pane) or pane or {}
   local process = ui_format.normalize_proc(basename(active.foreground_process_name)) or ""
   local workspace = clean(session)
   local directory = cwd(active)
   local details = metadata(active, process, workspace, directory)
+  local agent = clean((active.user_vars or {}).agent_state):match("|([^|]+)$")
+  local protocol_agent, protocol_title
+  if active.pane_id then
+    pcall(function()
+      local object = wezterm.mux.get_pane(active.pane_id)
+      local records = object and object:get_program_status() or {}
+      for index = #records, 1, -1 do
+        local record = records[index]
+        if clean(record.title) ~= "" then
+          protocol_agent, protocol_title = clean(record.app), clean(record.title)
+          break
+        end
+      end
+    end)
+  end
+  identities = identities or {}
+  local identity = identities[agent] or identities[process] or identities[protocol_agent]
+  local label = identity and clean(identity.label) or process
+  if details == "" then
+    details = protocol_title or ""
+  end
   local parts = {}
 
-  for _, value in ipairs({ process, workspace, directory, details }) do
+  for _, value in ipairs({ label, workspace, directory, details }) do
     if value ~= "" then
       parts[#parts + 1] = value
     end

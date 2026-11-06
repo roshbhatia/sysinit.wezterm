@@ -936,6 +936,27 @@ assert(
   "the hidden window title did not prefer explicit process metadata: " .. explicit_title
 )
 local invalid = string.char(0xff, 0xc3, 0x28)
+local original_get_pane = wezterm.mux.get_pane
+wezterm.mux.get_pane = function()
+  return {
+    get_program_status = function()
+      return { { app = "codex", state = "working", title = "Review provider changes" } }
+    end,
+  }
+end
+local protocol_title = windowtitle.format(nil, {
+  pane_id = 17,
+  title = "wezterm",
+  current_working_dir = { file_path = test_home .. "/github/personal/roshbhatia/sysinit" },
+}, "review", { codex = { label = "Codex" } })
+assert(protocol_title == "Codex · review · {gh}/sysinit · Review provider changes")
+local native_title = windowtitle.format(nil, {
+  pane_id = 17,
+  title = "Named conversation",
+  user_vars = { agent_state = "working|tool: command|0|claude" },
+}, "review", { claude = { label = "Claude Code" }, codex = { label = "Codex" } })
+assert(native_title == "Claude Code · review · Named conversation", "native task context was replaced by tool status")
+wezterm.mux.get_pane = original_get_pane
 local escaped = string.char(0x1b) .. "[31mred" .. string.char(0x1b) .. "[0m"
 local hostile_title = windowtitle.format({
   active_pane = {

@@ -513,7 +513,7 @@ function M.setup(config)
       local window = wezterm.mux.get_window(tab.window_id)
       workspace = window and window:get_workspace() or ""
     end)
-    return ui_windowtitle.format(tab, pane, workspace)
+    return ui_windowtitle.format(tab, pane, workspace, config_data.agentIdentity)
   end)
 
   local hyperlink_rules = wezterm.default_hyperlink_rules()
