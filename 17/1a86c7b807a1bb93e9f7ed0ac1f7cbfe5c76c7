@@ -1,0 +1,22 @@
+checks/wezterm.lua
+  s_de8d39c3c56992::t_96913b4bad4ee7 1297-1316
+lua/sysinit/pkg/ui.lua
+  s_de8d39c3c56992::t_5124ed60de21e7 126-128,145-155
+  s_de8d39c3c56992::t_120df2385db8c6 162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "171a86c7b807a1bb93e9f7ed0ac1f7cbfe5c76c7",
+  "prompts": {},
+  "sessions": {
+    "s_de8d39c3c56992": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ad25-3528-7c81-a954-276c13dcabf6",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
