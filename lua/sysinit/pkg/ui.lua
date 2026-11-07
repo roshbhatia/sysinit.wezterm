@@ -91,7 +91,8 @@ function M.setup(config)
   config.window_background_opacity = config_data.transparency.opacity
 
   if utils.is_darwin() then
-    config.front_end = "WebGpu"
+    -- Metal drawable acquisition can block the GUI thread during window transitions.
+    config.front_end = "OpenGL"
     config.window_decorations = "RESIZE|MACOS_FORCE_ENABLE_SHADOW"
     config.macos_window_background_blur = config_data.transparency.blur
   else
