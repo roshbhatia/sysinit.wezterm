@@ -1294,6 +1294,26 @@ assert(unknown_action == nil and unknown_error, "unknown Mosh target silently sp
 
 local state_panes = require("sysinit.pkg.ui.panes")
 local state_rollup = require("sysinit.pkg.ui.rollup")
+local real_time = os.time
+local poll_time, deck_polls = 10000, 0
+local saved_windows = mux_windows
+mux_windows = {}
+os.time = function()
+  return poll_time
+end
+local function poll_deck()
+  deck_polls = deck_polls + 1
+  return {}
+end
+for _ = 1, 100 do
+  state_rollup.states(poll_deck)
+end
+assert(deck_polls == 1, "title-triggered status events repeated agent detection within one tick")
+poll_time = poll_time + 1
+state_rollup.states(poll_deck)
+assert(deck_polls == 2, "agent detection did not refresh on the next tick")
+os.time = real_time
+mux_windows = saved_windows
 local screen = "• Working (14m 27s • esc to interrupt) · 2 background terminals running"
 local state_pane = {
   get_user_vars = function()

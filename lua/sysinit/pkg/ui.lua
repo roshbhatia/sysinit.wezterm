@@ -123,7 +123,9 @@ function M.setup(config)
     wezterm.log_warn("Failed to load agent-deck: " .. tostring(agent_deck))
   end
   if agent_deck_ok then
-    agent_deck.apply_to_config(config, {
+    -- Own polling here: title changes also emit update-status, so the plugin's
+    -- status observer scans every pane far more often than the timer interval.
+    agent_deck.setup({
       tab_title = { enabled = false },
       right_status = { enabled = false },
       cooldown_ms = 150,
@@ -140,14 +142,24 @@ function M.setup(config)
   local nf = wezterm.nerdfonts or {}
 
   local function deck_states()
-    return agent_deck_ok and agent_deck.get_all_agent_states() or {}
+    if not agent_deck_ok then
+      return {}
+    end
+    for _, window in ipairs(wezterm.mux.all_windows()) do
+      for _, tab in ipairs(window:tabs()) do
+        for _, pane in ipairs(tab:panes()) do
+          agent_deck.update_pane(pane)
+        end
+      end
+    end
+    return agent_deck.get_all_agent_states()
   end
 
   local function agent_session_states()
     return ui_rollup.states(deck_states)
   end
 
-  -- One walk per tick, over the rollup's per-second cache, not one walk per handler.
+  -- One collection per tick, shared through the rollup's per-second cache.
   local notified = {}
   -- A pane that never worked has nothing to wait on; without this a fresh agent
   -- pane reads as "waiting" the moment it opens and notifies on every session start.
