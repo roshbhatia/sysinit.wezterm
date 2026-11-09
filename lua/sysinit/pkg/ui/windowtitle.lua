@@ -1,4 +1,5 @@
 local ui_format = require("sysinit.pkg.ui.format")
+local ui_panes = require("sysinit.pkg.ui.panes")
 local wezterm = require("wezterm")
 
 local M = {}
@@ -88,7 +89,7 @@ function M.format(tab, pane, session, identities, observed_agent, facts)
   local candidates = { observed_agent, facts.agent, agent, protocol_agent }
   local agent_name, identity
   for index = 1, 4 do
-    local name = candidates[index]
+    local name = ui_panes.canonical_agent(candidates[index])
     if name and identities[name] then
       agent_name, identity = name, identities[name]
       break

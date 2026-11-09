@@ -997,6 +997,18 @@ do
     alias_title == "default · Claude Code (working)",
     "an unregistered alias hid the registered agent: " .. alias_title
   )
+  local title_panes = require("sysinit.pkg.ui.panes")
+  title_panes.configure({ claude = { patterns = { "claude", "claude%-code" } } })
+  local spelled_title = windowtitle.format(
+    nil,
+    { pane_id = 20 },
+    "default",
+    { claude = { label = "Claude Code" } },
+    "claude-code"
+  )
+  assert(spelled_title == "default · Claude Code", "a registry spelling did not resolve: " .. spelled_title)
+  assert(title_panes.canonical_agent("codex") == "codex", "an unknown agent name was rewritten")
+  title_panes.configure({})
   local agent_facts = function()
     return { agent = "claude", status = "waiting", branch = "feat/firefox" }
   end

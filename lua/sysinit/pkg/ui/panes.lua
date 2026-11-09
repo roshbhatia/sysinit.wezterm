@@ -91,6 +91,22 @@ end
 
 local record_cache = {}
 
+-- Hooks, agent-deck and OSC 7501 each name an agent their own way; the registry's
+-- patterns map every spelling onto the registry key.
+function M.canonical_agent(name)
+  if type(name) ~= "string" or name == "" or agents[name] then
+    return name ~= "" and name or nil
+  end
+  for key, spec in pairs(agents) do
+    for _, pattern in ipairs(spec.patterns or {}) do
+      if name:match("^" .. pattern .. "$") then
+        return key
+      end
+    end
+  end
+  return name
+end
+
 -- Mux-client panes expose no foreground process, so titles name the agent from the
 -- hook record and the branch from .git rather than from the process tree.
 function M.facts(pane_id, cwd, now)
@@ -106,7 +122,7 @@ function M.facts(pane_id, cwd, now)
     end
   end
   local facts = {
-    agent = M.latest_agent(pane_id) or (record and record.agent ~= "" and record.agent) or nil,
+    agent = M.canonical_agent(M.latest_agent(pane_id) or (record and record.agent) or nil),
     status = M.latest(pane_id) or (record and record.status) or nil,
   }
   if record and record.repo ~= "" and record.branch then
