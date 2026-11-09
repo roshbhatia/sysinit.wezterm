@@ -281,6 +281,21 @@ corrupt:write("{")
 corrupt:close()
 windows, attached = {}, false
 assert(recovery.restore() and #windows == 2, "corrupt snapshot did not recover from backup")
+local slots_before = fake.GLOBAL.workspace_slots
+assert(recovery.fork("alpha", "gamma"), table.concat(operations, "\n"))
+assert(
+  #windows == 3 and windows[3]:get_workspace() == "gamma",
+  "fork did not spawn the copy into a domain that still holds panes"
+)
+assert(active == "gamma", "fork did not activate the copy")
+assert(fake.GLOBAL.workspace_slots == slots_before, "fork replaced the slot table")
+assert(not recovery.fork("missing", "delta") and #windows == 3, "fork of an absent session spawned windows")
+assert(recovery.save() and recovery.forget("alpha"))
+local pruned = assert(io.open(state_dir .. "/session.json"))
+for _, workspace in ipairs(native.json_parse(pruned:read("*a")).workspaces) do
+  assert(workspace.workspace ~= "alpha", "forget left the snapshot in place")
+end
+pruned:close()
 windows, attached = {}, false
 events["gui-startup"]({ args = { "explicit-command" } })
 assert(#windows == 0, "explicit launch restored unrelated windows")

@@ -210,12 +210,8 @@ local function restore_float(tab, saved)
   end
 end
 
-function M.restore(selected_workspace)
-  local path = settings.state_dir .. "/session.json"
-  local state = read_session(path) or read_session(path .. ".bak")
-  if not state then
-    return false
-  end
+-- A fresh restore spawns into domains that still hold panes; a fork needs that.
+local function restore_state(state, selected_workspace, fresh)
   if type(selected_workspace) == "string" then
     local selected = {}
     for _, workspace in ipairs(state.workspaces) do
@@ -297,7 +293,7 @@ function M.restore(selected_workspace)
             for _, saved_tab in ipairs(saved_window.tabs) do
               local root = saved_tab.pane_tree
               local name = domain_name(root.domain)
-              if not retained[name] and prepare_tree(root, unavailable) then
+              if (fresh or not retained[name]) and prepare_tree(root, unavailable) then
                 local tab, pane
                 if window then
                   tab, pane = window:spawn_tab({ cwd = root.cwd, domain = { DomainName = name } })
@@ -342,6 +338,51 @@ function M.restore(selected_workspace)
     end
   end)
   busy = false
+  if not ok then
+    report(err)
+  end
+  return ok
+end
+
+function M.restore(selected_workspace)
+  local path = settings.state_dir .. "/session.json"
+  local state = read_session(path) or read_session(path .. ".bak")
+  if not state then
+    return false
+  end
+  return restore_state(state, selected_workspace, false)
+end
+
+function M.fork(source, target)
+  local state = M.capture()
+  local selected
+  for _, workspace in ipairs(state.workspaces) do
+    if workspace.workspace == source then
+      workspace.workspace = target
+      selected = workspace
+    end
+  end
+  if not selected then
+    return false
+  end
+  return restore_state({ version = 1, active = target, workspaces = { selected } }, target, true)
+end
+
+function M.forget(name)
+  local path = settings.state_dir .. "/session.json"
+  local state = read_session(path)
+  if not state then
+    return false
+  end
+  local kept = {}
+  for _, workspace in ipairs(state.workspaces) do
+    if workspace.workspace ~= name then
+      kept[#kept + 1] = workspace
+    end
+  end
+  state.workspaces = kept
+  deferred[name] = nil
+  local ok, err = pcall(write_snapshot, path, state)
   if not ok then
     report(err)
   end
@@ -422,6 +463,63 @@ function M.setup(config, opts)
               action = wezterm.action_callback(function(_, _, name)
                 if name then
                   M.restore(name)
+                end
+              end),
+            }),
+            pane
+          )
+        end),
+      },
+      {
+        brief = "Session: fork current",
+        action = wezterm.action_callback(function(window, pane)
+          local source = window:active_workspace()
+          window:perform_action(
+            wezterm.action.PromptInputLine({
+              description = "Fork " .. source .. " as",
+              action = wezterm.action_callback(function(inner, _, line)
+                local target = line and line:match("^%s*(.-)%s*$") or ""
+                if target == "" then
+                  return
+                end
+                for _, live in ipairs(wezterm.mux.get_workspace_names()) do
+                  if live == target then
+                    inner:toast_notification("Session", target .. " already exists", nil, 3000)
+                    return
+                  end
+                end
+                M.fork(source, target)
+              end),
+            }),
+            pane
+          )
+        end),
+      },
+      {
+        brief = "Session: delete saved snapshot",
+        action = wezterm.action_callback(function(window, pane)
+          local live = {}
+          for _, name in ipairs(wezterm.mux.get_workspace_names()) do
+            live[name] = true
+          end
+          local state = read_session(settings.state_dir .. "/session.json")
+          local choices = {}
+          for _, workspace in ipairs(state and state.workspaces or {}) do
+            if not live[workspace.workspace] then
+              choices[#choices + 1] = { id = workspace.workspace, label = workspace.workspace }
+            end
+          end
+          if #choices == 0 then
+            window:toast_notification("Session", "no saved snapshot outside the live sessions", nil, 3000)
+            return
+          end
+          window:perform_action(
+            wezterm.action.InputSelector({
+              title = "Delete saved snapshot",
+              choices = choices,
+              action = wezterm.action_callback(function(_, _, name)
+                if name then
+                  M.forget(name)
                 end
               end),
             }),
