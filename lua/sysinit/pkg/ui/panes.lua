@@ -1,6 +1,7 @@
 local wezterm = require("wezterm")
 local utils = require("sysinit.pkg.utils")
 local activity = require("sysinit.pkg.ui.activity")
+local git_head = require("sysinit.pkg.ui.git_head")
 
 local M = {}
 
@@ -86,6 +87,37 @@ end
 
 function M.latest_agent(id)
   return history[id] and history[id].agent
+end
+
+local record_cache = {}
+
+-- Mux-client panes expose no foreground process, so titles name the agent from the
+-- hook record and the branch from .git rather than from the process tree.
+function M.facts(pane_id, cwd, now)
+  now = now or os.time()
+  local record
+  if pane_id then
+    local hit = record_cache[pane_id]
+    if hit and now - hit.at < 2 then
+      record = hit.record
+    else
+      record = M.read_pane_record(pane_id)
+      record_cache[pane_id] = { at = now, record = record }
+    end
+  end
+  local facts = {
+    agent = M.latest_agent(pane_id) or (record and record.agent ~= "" and record.agent) or nil,
+    status = M.latest(pane_id) or (record and record.status) or nil,
+  }
+  if record and record.repo ~= "" and record.branch then
+    facts.repo, facts.branch = record.repo, record.branch
+  else
+    local head = git_head.lookup(cwd, now)
+    if head then
+      facts.repo, facts.branch = head.repo, head.branch
+    end
+  end
+  return facts
 end
 
 function M.configure(specs)

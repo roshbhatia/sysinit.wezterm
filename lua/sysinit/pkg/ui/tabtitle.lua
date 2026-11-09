@@ -10,6 +10,16 @@ local nf = wezterm.nerdfonts or {}
 local M = {}
 
 local SHELLS = { zsh = true, bash = true, fish = true, sh = true, nu = true, ["-zsh"] = true }
+local DEFAULT_BRANCHES = { main = true, master = true }
+local MAX_TOPIC = 28
+local MAX_BRANCH = 24
+
+local function shorten(text, limit)
+  if utf8.len(text) and utf8.len(text) > limit then
+    return text:sub(1, utf8.offset(text, limit) - 1) .. "…"
+  end
+  return text
+end
 
 function M.format(tab, cfg, ctx)
   local pane = ui_floating.normal_pane(tab)
@@ -35,10 +45,10 @@ function M.format(tab, cfg, ctx)
     return " " .. ui_statusbar.tab_index(tab) .. " " .. explicit .. badge .. " "
   end
 
-  local dir
+  local dir, cwd
   local cwd_uri = pane and pane.current_working_dir
   if cwd_uri then
-    local cwd = cwd_uri.file_path or tostring(cwd_uri)
+    cwd = cwd_uri.file_path or tostring(cwd_uri)
     if ctx.home ~= "" and cwd == ctx.home then
       dir = "~"
     else
@@ -55,6 +65,20 @@ function M.format(tab, cfg, ctx)
   end
   label = label or dir or proc or "shell"
 
+  local facts = ctx.facts and pane and ctx.facts(pane.pane_id, cwd) or {}
+  if facts.agent then
+    local identity = (ctx.identities or {})[facts.agent] or {}
+    local named = identity.label or facts.agent
+    local topic = osc
+    if not topic or topic == "" or SHELLS[topic:lower()] or topic:lower():find(facts.agent, 1, true) then
+      topic = named
+    end
+    label = (identity.glyph and identity.glyph .. " " or "") .. shorten(topic, MAX_TOPIC)
+  end
+  if facts.branch and not DEFAULT_BRANCHES[facts.branch] then
+    label = label .. " " .. shorten(facts.branch, MAX_BRANCH)
+  end
+
   if not (ctx.sigil_ok and ctx.ribbon_ok) then
     return " " .. ui_statusbar.tab_index(tab) .. " " .. label .. badge .. " "
   end
@@ -63,7 +87,7 @@ function M.format(tab, cfg, ctx)
   r:append(nil, nil, " " .. ui_statusbar.tab_index(tab) .. " " .. label .. " ")
 
   pcall(function()
-    local s = pane and ui_panes.latest(pane.pane_id)
+    local s = pane and ui_panes.latest(pane.pane_id) or facts.status
     local icon = s and s ~= "idle" and ui_format.state_icons[s]
     if icon then
       r:append(nil, nil, icon .. " ")

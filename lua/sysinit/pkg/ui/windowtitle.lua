@@ -64,56 +64,41 @@ local function cwd(pane)
   return clean(ui_format.smart_path(clean(value)))
 end
 
-local function metadata(pane, process, session, directory)
-  local vars = pane and pane.user_vars or {}
-  local explicit = clean(vars.SYSINIT_WINDOW_METADATA)
-  if explicit ~= "" then
-    return explicit
-  end
+local SHOWN_STATES = { waiting = true, working = true }
 
-  local title = clean(pane and pane.title)
-  if title == "" or title == "wezterm" or title == process or title == session or title == directory then
-    return ""
-  end
-  if basename(title) == process then
-    return ""
-  end
-  return title
-end
-
-function M.format(tab, pane, session, identities, observed_agent)
+-- Session first, then what runs in the pane, then where; the agent's own title
+-- belongs to the tab, where it does not crowd the window switcher.
+function M.format(tab, pane, session, identities, observed_agent, facts)
   local active = (tab and tab.active_pane) or pane or {}
+  facts = facts or {}
   local process = ui_format.normalize_proc(basename(active.foreground_process_name)) or ""
-  local workspace = clean(session)
-  local directory = cwd(active)
-  local details = metadata(active, process, workspace, directory)
   local agent = clean((active.user_vars or {}).agent_state):match("|([^|]+)$")
-  local protocol_agent, protocol_title
+  local protocol_agent
   if active.pane_id then
     pcall(function()
       local object = wezterm.mux.get_pane(active.pane_id)
-      local records = object and object:get_program_status() or {}
-      for index = #records, 1, -1 do
-        local record = records[index]
+      for _, record in ipairs(object and object:get_program_status() or {}) do
         if clean(record.app) ~= "" then
-          protocol_agent = protocol_agent or clean(record.app)
-        end
-        if clean(record.title) ~= "" then
-          protocol_title = clean(record.title)
-          break
+          protocol_agent = clean(record.app)
         end
       end
     end)
   end
   identities = identities or {}
-  local identity = identities[observed_agent] or identities[agent] or identities[process] or identities[protocol_agent]
-  local label = identity and clean(identity.label) or process
-  if details == "" then
-    details = protocol_title or ""
+  local agent_name = observed_agent or facts.agent or agent or protocol_agent
+  local identity = identities[agent_name] or identities[process]
+  local actor = identity and clean(identity.label) or clean(agent_name or "") ~= "" and clean(agent_name) or process
+  if actor ~= "" and (identity or agent_name) and SHOWN_STATES[facts.status] then
+    actor = actor .. " (" .. facts.status .. ")"
   end
-  local parts = {}
 
-  for _, value in ipairs({ label, workspace, directory, details }) do
+  local location = cwd(active)
+  if clean(facts.repo) ~= "" and clean(facts.branch) ~= "" then
+    location = clean(facts.repo) .. ":" .. clean(facts.branch)
+  end
+
+  local parts = {}
+  for _, value in ipairs({ clean(session), actor, location, clean((active.user_vars or {}).SYSINIT_WINDOW_METADATA) }) do
     if value ~= "" then
       parts[#parts + 1] = value
     end

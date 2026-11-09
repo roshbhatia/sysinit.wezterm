@@ -513,6 +513,8 @@ function M.setup(config)
     wezterm.on("format-tab-title", function(tab, _tabs, _panes, cfg, _hover, _max_width)
       return ui_tabtitle.format(tab, cfg, {
         home = home,
+        identities = config_data.agentIdentity,
+        facts = ui_panes.facts,
         sigil_ok = sigil_ok,
         sigil = sigil,
         ribbon_ok = ribbon_ok,
@@ -528,7 +530,16 @@ function M.setup(config)
       workspace = window and window:get_workspace() or ""
     end)
     local active = (tab and tab.active_pane) or pane or {}
-    return ui_windowtitle.format(tab, pane, workspace, config_data.agentIdentity, ui_panes.latest_agent(active.pane_id))
+    local cwd = active.current_working_dir
+    local facts = ui_panes.facts(active.pane_id, cwd and cwd.file_path)
+    return ui_windowtitle.format(
+      tab,
+      pane,
+      workspace,
+      config_data.agentIdentity,
+      ui_panes.latest_agent(active.pane_id),
+      facts
+    )
   end)
 
   local hyperlink_rules = wezterm.default_hyperlink_rules()

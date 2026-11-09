@@ -919,10 +919,7 @@ local title = windowtitle.format({
     user_vars = {},
   },
 }, nil, "sysinit")
-assert(
-  title == "codex · sysinit · {gh}/sysinit · reviewing provider changes",
-  "the hidden window title lost process, session, cwd, or OSC metadata: " .. title
-)
+assert(title == "sysinit · codex · {gh}/sysinit", "the window title lost session, process, or cwd: " .. title)
 local explicit_title = windowtitle.format({
   active_pane = {
     foreground_process_name = "/profile/bin/nu",
@@ -932,8 +929,8 @@ local explicit_title = windowtitle.format({
   },
 }, nil, "default")
 assert(
-  explicit_title == "nu · default · {home} · agent: verifier ready",
-  "the hidden window title did not prefer explicit process metadata: " .. explicit_title
+  explicit_title == "default · nu · {home} · agent: verifier ready",
+  "the window title dropped explicit metadata: " .. explicit_title
 )
 local invalid = string.char(0xff, 0xc3, 0x28)
 local original_get_pane = wezterm.mux.get_pane
@@ -949,22 +946,82 @@ local protocol_title = windowtitle.format(nil, {
   title = "wezterm",
   current_working_dir = { file_path = test_home .. "/github/personal/roshbhatia/sysinit" },
 }, "review", { codex = { label = "Codex" } })
-assert(protocol_title == "Codex · review · {gh}/sysinit · Review provider changes")
+assert(protocol_title == "review · Codex · {gh}/sysinit", protocol_title)
 local native_title = windowtitle.format(nil, {
   pane_id = 17,
   title = "Named conversation",
   user_vars = { agent_state = "working|tool: command|0|claude" },
 }, "review", { claude = { label = "Claude Code" }, codex = { label = "Codex" } })
-assert(native_title == "Claude Code · review · Named conversation", "native task context was replaced by tool status")
+assert(native_title == "review · Claude Code", "the agent topic leaked into the window title: " .. native_title)
 wezterm.mux.get_pane = original_get_pane
 local observed_title = windowtitle.format(nil, {
   foreground_process_name = "/profile/bin/agent",
   title = "Review the cache",
 }, "review", { cursor = { label = "Cursor" } }, "cursor")
-assert(
-  observed_title == "Cursor · review · Review the cache",
-  "registry detection was replaced by a generic executable name"
+assert(observed_title == "review · Cursor", "registry detection was replaced by a generic executable name")
+local fact_title = windowtitle.format(
+  nil,
+  {
+    pane_id = 18,
+    current_working_dir = { file_path = test_home .. "/github/personal/roshbhatia/sysinit" },
+  },
+  "sysinit-firefox",
+  { claude = { label = "Claude Code" } },
+  nil,
+  {
+    agent = "claude",
+    status = "waiting",
+    repo = "sysinit",
+    branch = "feat/firefox",
+  }
 )
+assert(fact_title == "sysinit-firefox · Claude Code (waiting) · sysinit:feat/firefox", fact_title)
+local idle_title = windowtitle.format(nil, { pane_id = 18 }, "default", { claude = { label = "Claude Code" } }, nil, {
+  agent = "claude",
+  status = "idle",
+})
+assert(idle_title == "default · Claude Code", "an idle agent carried a state suffix: " .. idle_title)
+local agent_facts = function()
+  return { agent = "claude", status = "waiting", branch = "feat/firefox" }
+end
+local agent_tab = tabtitle.format({
+  tab_index = 0,
+  active_pane = { pane_id = 3, title = "Fix the diff conflict in the palette commands" },
+}, {}, { home = "", identities = { claude = { glyph = "G", label = "Claude Code" } }, facts = agent_facts })
+assert(agent_tab == " [1] G Fix the diff conflict in th… feat/firefox ", "agent tab title: " .. agent_tab)
+local plain_tab = tabtitle.format({
+  tab_index = 0,
+  active_pane = { pane_id = 4, title = "claude" },
+}, {}, {
+  home = "",
+  identities = { claude = { glyph = "G", label = "Claude Code" } },
+  facts = function()
+    return { agent = "claude", branch = "main" }
+  end,
+})
+assert(plain_tab == " [1] G Claude Code ", "agent tab without a topic: " .. plain_tab)
+local git_head = require("sysinit.pkg.ui.git_head")
+local git_root = os.tmpname()
+os.remove(git_root)
+local function make(path, text)
+  assert(os.execute("mkdir -p '" .. path:match("^(.*)/[^/]+$") .. "'"))
+  local file = assert(io.open(path, "w"))
+  file:write(text)
+  file:close()
+end
+make(git_root .. "/repo/.git/HEAD", "ref: refs/heads/main\n")
+make(git_root .. "/repo/src/keep", "")
+make(git_root .. "/repo/.git/worktrees/topic/HEAD", "ref: refs/heads/feat/topic\n")
+make(git_root .. "/topic/.git", "gitdir: " .. git_root .. "/repo/.git/worktrees/topic\n")
+make(git_root .. "/detached/.git/HEAD", "0123456789abcdef0123456789abcdef01234567\n")
+local main_head = git_head.lookup(git_root .. "/repo/src", 1)
+assert(main_head and main_head.repo == "repo" and main_head.branch == "main", "git_head missed a nested checkout")
+local topic_head = git_head.lookup(git_root .. "/topic", 1)
+assert(topic_head and topic_head.repo == "repo" and topic_head.branch == "feat/topic", "git_head missed a worktree")
+local detached_head = git_head.lookup(git_root .. "/detached", 1)
+assert(detached_head and detached_head.branch == "0123456", "git_head missed a detached HEAD")
+assert(git_head.lookup(git_root, 1) == nil, "git_head invented a repository")
+os.execute("rm -rf '" .. git_root .. "'")
 local escaped = string.char(0x1b) .. "[31mred" .. string.char(0x1b) .. "[0m"
 local hostile_title = windowtitle.format({
   active_pane = {
@@ -982,18 +1039,16 @@ local pane_title = windowtitle.format({
   active_pane = {
     foreground_process_name = "/profile/bin/codex",
     current_working_dir = { file_path = test_home },
-    title = "review " .. invalid .. " ready 🚀",
-    user_vars = {},
+    user_vars = { SYSINIT_WINDOW_METADATA = "review " .. invalid .. " ready 🚀" },
   },
 }, nil, "default")
-assert(utf8.len(pane_title), "a malformed pane title produced invalid UTF-8")
-assert(pane_title:find("ready 🚀", 1, true), "pane title repair lost later valid Unicode")
+assert(utf8.len(pane_title), "malformed window metadata produced invalid UTF-8")
+assert(pane_title:find("ready 🚀", 1, true), "window metadata repair lost later valid Unicode")
 local bounded_title = windowtitle.format({
   active_pane = {
     foreground_process_name = string.rep("p", 5000),
     current_working_dir = { file_path = string.rep("d", 5000) },
-    title = string.rep("t", 5000),
-    user_vars = {},
+    user_vars = { SYSINIT_WINDOW_METADATA = string.rep("t", 5000) },
   },
 }, nil, string.rep("s", 5000))
 assert(#bounded_title <= 1024, "the hidden window title exceeded its byte bound")
@@ -1003,8 +1058,7 @@ local boundary_title = windowtitle.format({
   active_pane = {
     foreground_process_name = string.rep("p", 256),
     current_working_dir = { file_path = string.rep("d", 256) },
-    title = string.rep("m", 240) .. "🚀x",
-    user_vars = {},
+    user_vars = { SYSINIT_WINDOW_METADATA = string.rep("m", 240) .. "🚀x" },
   },
 }, nil, string.rep("s", 256))
 assert(#boundary_title <= 1024, "the Unicode boundary title exceeded its byte bound")
