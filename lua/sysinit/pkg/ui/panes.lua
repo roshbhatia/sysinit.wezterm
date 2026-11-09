@@ -123,7 +123,7 @@ function M.facts(pane_id, cwd, now)
   end
   local facts = {
     agent = M.canonical_agent(M.latest_agent(pane_id) or (record and record.agent) or nil),
-    status = M.latest(pane_id) or (record and record.status) or nil,
+    status = (M.latest(pane_id) ~= "unknown" and M.latest(pane_id)) or (record and record.status) or nil,
   }
   if record and record.repo ~= "" and record.branch then
     facts.repo, facts.branch = record.repo, record.branch
