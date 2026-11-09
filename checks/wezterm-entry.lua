@@ -9,12 +9,12 @@ package.path = table.concat({
 local wezterm = require("wezterm")
 local on = wezterm.on
 local title_handlers = {}
-local palette_handlers = 0
+local palette_handlers = {}
 wezterm.on = function(name, callback)
   if name == "format-tab-title" then
     title_handlers[#title_handlers + 1] = callback
   elseif name == "augment-command-palette" then
-    palette_handlers = palette_handlers + 1
+    palette_handlers[#palette_handlers + 1] = callback
   end
   return on(name, callback)
 end
@@ -57,7 +57,16 @@ if ok then
   local selected = tabline.get_theme().tab.active
   assert(config.colors.selection_fg == selected.fg and config.colors.selection_bg == selected.bg)
 end
-assert(palette_handlers >= 2, "pane palette did not register beside the session palette")
+local pane_palette_registered = false
+for _, handler in ipairs(palette_handlers) do
+  local ok, entries = pcall(handler, nil, nil)
+  for _, entry in ipairs(ok and type(entries) == "table" and entries or {}) do
+    if entry.brief == "Pane: swap with" then
+      pane_palette_registered = true
+    end
+  end
+end
+assert(pane_palette_registered, "the pane palette handler was not registered")
 local pane_palette = require("sysinit.pkg.pane_palette")
 local briefs = {}
 for _, entry in ipairs(pane_palette.entries()) do
