@@ -2,7 +2,7 @@ local wezterm = require("wezterm")
 
 local M = {}
 
-local OPTIONAL = { "events", "keybindings", "ui" }
+local OPTIONAL = { "events", "keybindings", "ui", "pane_palette" }
 
 local function report(failures)
   for _, f in ipairs(failures) do
