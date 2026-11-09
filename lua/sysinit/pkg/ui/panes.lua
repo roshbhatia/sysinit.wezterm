@@ -90,6 +90,57 @@ function M.latest_agent(id)
 end
 
 local record_cache = {}
+local listing = { at = -1, ids = {} }
+
+local function contains(tree, path)
+  return type(tree) == "string" and type(path) == "string" and (path == tree or path:sub(1, #tree + 1) == tree .. "/")
+end
+
+local function record_ids(now)
+  if now - listing.at >= 2 then
+    local ids = {}
+    pcall(function()
+      for _, path in ipairs(wezterm.read_dir(utils.state_path("agentPanes", "agents/panes"))) do
+        local id = path:match("(%d+)%.json$")
+        if id then
+          ids[#ids + 1] = tonumber(id)
+        end
+      end
+    end)
+    listing = { at = now, ids = ids }
+  end
+  return listing.ids
+end
+
+-- A mux-client pane's id is the GUI's, while the writer keys records by the mux
+-- server's id, so an id match counts only when the record's worktree holds the
+-- pane; otherwise the one record whose worktree holds the cwd stands in.
+function M.record_for(pane_id, cwd, now)
+  now = now or os.time()
+  local key = tostring(pane_id) .. "|" .. tostring(cwd)
+  local hit = record_cache[key]
+  if hit and now - hit.at < 2 then
+    return hit.record
+  end
+  local record = pane_id and M.read_pane_record(pane_id)
+  if record and cwd and record.worktree and not contains(record.worktree, cwd) then
+    record = nil
+  end
+  if not record and cwd then
+    for _, id in ipairs(record_ids(now)) do
+      local candidate = M.read_pane_record(id)
+      if candidate and contains(candidate.worktree, cwd) then
+        if record then
+          record = nil
+          break
+        end
+        record = candidate
+      end
+    end
+  end
+  record_cache[key] = { at = now, record = record }
+  return record
+end
 
 -- Hooks, agent-deck and OSC 7501 each name an agent their own way; the registry's
 -- patterns map every spelling onto the registry key.
@@ -107,23 +158,24 @@ function M.canonical_agent(name)
   return name
 end
 
--- Mux-client panes expose no foreground process, so titles name the agent from the
--- hook record and the branch from .git rather than from the process tree.
+-- Mux-client panes expose no foreground process, so titles prefer OSC 7501
+-- program status, which crosses the mux, then the hook record, then .git.
 function M.facts(pane_id, cwd, now)
   now = now or os.time()
-  local record
+  local program_status, _, _, program_app
   if pane_id then
-    local hit = record_cache[pane_id]
-    if hit and now - hit.at < 2 then
-      record = hit.record
-    else
-      record = M.read_pane_record(pane_id)
-      record_cache[pane_id] = { at = now, record = record }
-    end
+    pcall(function()
+      local object = wezterm.mux.get_pane(pane_id)
+      if object then
+        program_status, _, _, program_app = M.program_state(object)
+      end
+    end)
   end
+  local record = M.record_for(pane_id, cwd, now)
+  local latest = M.latest(pane_id)
   local facts = {
-    agent = M.canonical_agent(M.latest_agent(pane_id) or (record and record.agent) or nil),
-    status = (M.latest(pane_id) ~= "unknown" and M.latest(pane_id)) or (record and record.status) or nil,
+    agent = M.canonical_agent(program_app or M.latest_agent(pane_id) or (record and record.agent) or nil),
+    status = program_status or (latest ~= "unknown" and latest) or (record and record.status) or nil,
   }
   if record and record.repo ~= "" and record.branch then
     facts.repo, facts.branch = record.repo, record.branch

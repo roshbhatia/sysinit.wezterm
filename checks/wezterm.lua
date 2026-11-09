@@ -1008,6 +1008,39 @@ do
   )
   assert(spelled_title == "default · Claude Code", "a registry spelling did not resolve: " .. spelled_title)
   assert(title_panes.canonical_agent("codex") == "codex", "an unknown agent name was rewritten")
+  local records = {
+    [3] = { worktree = "/w/a", agent = "claude", status = "working", repo = "a", branch = "main" },
+    [7] = { worktree = "/w/b", agent = "codex", status = "idle", repo = "b", branch = "main" },
+  }
+  local original_read_record, original_read_dir = title_panes.read_pane_record, wezterm.read_dir
+  local saved_get_pane = wezterm.mux.get_pane
+  title_panes.read_pane_record = function(id)
+    return records[tonumber(id)]
+  end
+  wezterm.read_dir = function()
+    local paths = {}
+    for id in pairs(records) do
+      paths[#paths + 1] = "/state/agents/panes/" .. id .. ".json"
+    end
+    return paths
+  end
+  assert(title_panes.record_for(1, "/w/a/src", 100) == records[3], "a GUI pane id missed its mux record")
+  assert(title_panes.record_for(7, "/w/a", 110) == records[3], "a colliding id borrowed another pane's record")
+  records[8] = { worktree = "/w/a", agent = "pi" }
+  assert(title_panes.record_for(1, "/w/a", 120) == nil, "two records for one worktree were not treated as ambiguous")
+  records[8] = nil
+  wezterm.mux.get_pane = function()
+    return {
+      get_program_status = function()
+        return { { app = "claude-code", state = "working" } }
+      end,
+    }
+  end
+  local program_facts = title_panes.facts(1, "/w/b", 130)
+  assert(program_facts.agent == "claude" and program_facts.status == "working", "program status did not lead the facts")
+  assert(program_facts.repo == "b", "facts lost the worktree record")
+  wezterm.mux.get_pane = saved_get_pane
+  title_panes.read_pane_record, wezterm.read_dir = original_read_record, original_read_dir
   title_panes.configure({})
   local agent_facts = function()
     return { agent = "claude", status = "waiting", branch = "feat/firefox" }

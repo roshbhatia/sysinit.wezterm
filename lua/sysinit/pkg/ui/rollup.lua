@@ -15,7 +15,8 @@ function M.collect(deck_states)
         for _, p in ipairs(tab:panes()) do
           local pane_id = p:pane_id()
           present[pane_id] = true
-          local rec = panes_mod.read_pane_record(pane_id)
+          local _, pane_path = panes_mod.pane_repo(p)
+          local rec = panes_mod.record_for(pane_id, pane_path ~= "" and pane_path or nil)
           local status, reason, since, agent, source = panes_mod.agent_state(p, deck_states, rec or false)
           if status then
             -- A VT that eats OSC 7 leaves the pane reporting its wrapper's cwd,
