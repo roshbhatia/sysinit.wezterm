@@ -959,69 +959,86 @@ local observed_title = windowtitle.format(nil, {
   title = "Review the cache",
 }, "review", { cursor = { label = "Cursor" } }, "cursor")
 assert(observed_title == "review · Cursor", "registry detection was replaced by a generic executable name")
-local fact_title = windowtitle.format(
-  nil,
-  {
-    pane_id = 18,
-    current_working_dir = { file_path = test_home .. "/github/personal/roshbhatia/sysinit" },
-  },
-  "sysinit-firefox",
-  { claude = { label = "Claude Code" } },
-  nil,
-  {
+do
+  local fact_title = windowtitle.format(
+    nil,
+    {
+      pane_id = 18,
+      current_working_dir = { file_path = test_home .. "/github/personal/roshbhatia/sysinit" },
+    },
+    "sysinit-firefox",
+    { claude = { label = "Claude Code" } },
+    nil,
+    {
+      agent = "claude",
+      status = "waiting",
+      repo = "sysinit",
+      branch = "feat/firefox",
+    }
+  )
+  assert(fact_title == "sysinit-firefox · Claude Code (waiting) · sysinit:feat/firefox", fact_title)
+  local idle_title = windowtitle.format(nil, { pane_id = 18 }, "default", { claude = { label = "Claude Code" } }, nil, {
     agent = "claude",
-    status = "waiting",
-    repo = "sysinit",
-    branch = "feat/firefox",
-  }
-)
-assert(fact_title == "sysinit-firefox · Claude Code (waiting) · sysinit:feat/firefox", fact_title)
-local idle_title = windowtitle.format(nil, { pane_id = 18 }, "default", { claude = { label = "Claude Code" } }, nil, {
-  agent = "claude",
-  status = "idle",
-})
-assert(idle_title == "default · Claude Code", "an idle agent carried a state suffix: " .. idle_title)
-local agent_facts = function()
-  return { agent = "claude", status = "waiting", branch = "feat/firefox" }
+    status = "idle",
+  })
+  assert(idle_title == "default · Claude Code", "an idle agent carried a state suffix: " .. idle_title)
+  local alias_title = windowtitle.format(
+    nil,
+    { pane_id = 19 },
+    "default",
+    { claude = { label = "Claude Code" } },
+    "claude-code",
+    {
+      agent = "claude",
+      status = "working",
+    }
+  )
+  assert(
+    alias_title == "default · Claude Code (working)",
+    "an unregistered alias hid the registered agent: " .. alias_title
+  )
+  local agent_facts = function()
+    return { agent = "claude", status = "waiting", branch = "feat/firefox" }
+  end
+  local agent_tab = tabtitle.format({
+    tab_index = 0,
+    active_pane = { pane_id = 3, title = "Fix the diff conflict in the palette commands" },
+  }, {}, { home = "", identities = { claude = { glyph = "G", label = "Claude Code" } }, facts = agent_facts })
+  assert(agent_tab == " [1] G Fix the diff conflict in th… feat/firefox ", "agent tab title: " .. agent_tab)
+  local plain_tab = tabtitle.format({
+    tab_index = 0,
+    active_pane = { pane_id = 4, title = "claude" },
+  }, {}, {
+    home = "",
+    identities = { claude = { glyph = "G", label = "Claude Code" } },
+    facts = function()
+      return { agent = "claude", branch = "main" }
+    end,
+  })
+  assert(plain_tab == " [1] G Claude Code ", "agent tab without a topic: " .. plain_tab)
+  local git_head = require("sysinit.pkg.ui.git_head")
+  local git_root = os.tmpname()
+  os.remove(git_root)
+  local function make(path, text)
+    assert(os.execute("mkdir -p '" .. path:match("^(.*)/[^/]+$") .. "'"))
+    local file = assert(io.open(path, "w"))
+    file:write(text)
+    file:close()
+  end
+  make(git_root .. "/repo/.git/HEAD", "ref: refs/heads/main\n")
+  make(git_root .. "/repo/src/keep", "")
+  make(git_root .. "/repo/.git/worktrees/topic/HEAD", "ref: refs/heads/feat/topic\n")
+  make(git_root .. "/topic/.git", "gitdir: " .. git_root .. "/repo/.git/worktrees/topic\n")
+  make(git_root .. "/detached/.git/HEAD", "0123456789abcdef0123456789abcdef01234567\n")
+  local main_head = git_head.lookup(git_root .. "/repo/src", 1)
+  assert(main_head and main_head.repo == "repo" and main_head.branch == "main", "git_head missed a nested checkout")
+  local topic_head = git_head.lookup(git_root .. "/topic", 1)
+  assert(topic_head and topic_head.repo == "repo" and topic_head.branch == "feat/topic", "git_head missed a worktree")
+  local detached_head = git_head.lookup(git_root .. "/detached", 1)
+  assert(detached_head and detached_head.branch == "0123456", "git_head missed a detached HEAD")
+  assert(git_head.lookup(git_root, 1) == nil, "git_head invented a repository")
+  os.execute("rm -rf '" .. git_root .. "'")
 end
-local agent_tab = tabtitle.format({
-  tab_index = 0,
-  active_pane = { pane_id = 3, title = "Fix the diff conflict in the palette commands" },
-}, {}, { home = "", identities = { claude = { glyph = "G", label = "Claude Code" } }, facts = agent_facts })
-assert(agent_tab == " [1] G Fix the diff conflict in th… feat/firefox ", "agent tab title: " .. agent_tab)
-local plain_tab = tabtitle.format({
-  tab_index = 0,
-  active_pane = { pane_id = 4, title = "claude" },
-}, {}, {
-  home = "",
-  identities = { claude = { glyph = "G", label = "Claude Code" } },
-  facts = function()
-    return { agent = "claude", branch = "main" }
-  end,
-})
-assert(plain_tab == " [1] G Claude Code ", "agent tab without a topic: " .. plain_tab)
-local git_head = require("sysinit.pkg.ui.git_head")
-local git_root = os.tmpname()
-os.remove(git_root)
-local function make(path, text)
-  assert(os.execute("mkdir -p '" .. path:match("^(.*)/[^/]+$") .. "'"))
-  local file = assert(io.open(path, "w"))
-  file:write(text)
-  file:close()
-end
-make(git_root .. "/repo/.git/HEAD", "ref: refs/heads/main\n")
-make(git_root .. "/repo/src/keep", "")
-make(git_root .. "/repo/.git/worktrees/topic/HEAD", "ref: refs/heads/feat/topic\n")
-make(git_root .. "/topic/.git", "gitdir: " .. git_root .. "/repo/.git/worktrees/topic\n")
-make(git_root .. "/detached/.git/HEAD", "0123456789abcdef0123456789abcdef01234567\n")
-local main_head = git_head.lookup(git_root .. "/repo/src", 1)
-assert(main_head and main_head.repo == "repo" and main_head.branch == "main", "git_head missed a nested checkout")
-local topic_head = git_head.lookup(git_root .. "/topic", 1)
-assert(topic_head and topic_head.repo == "repo" and topic_head.branch == "feat/topic", "git_head missed a worktree")
-local detached_head = git_head.lookup(git_root .. "/detached", 1)
-assert(detached_head and detached_head.branch == "0123456", "git_head missed a detached HEAD")
-assert(git_head.lookup(git_root, 1) == nil, "git_head invented a repository")
-os.execute("rm -rf '" .. git_root .. "'")
 local escaped = string.char(0x1b) .. "[31mred" .. string.char(0x1b) .. "[0m"
 local hostile_title = windowtitle.format({
   active_pane = {

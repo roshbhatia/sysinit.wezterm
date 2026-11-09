@@ -85,9 +85,18 @@ function M.format(tab, pane, session, identities, observed_agent, facts)
     end)
   end
   identities = identities or {}
-  local agent_name = observed_agent or facts.agent or agent or protocol_agent
-  local identity = identities[agent_name] or identities[process]
-  local actor = identity and clean(identity.label) or clean(agent_name or "") ~= "" and clean(agent_name) or process
+  local candidates = { observed_agent, facts.agent, agent, protocol_agent }
+  local agent_name, identity
+  for index = 1, 4 do
+    local name = candidates[index]
+    if name and identities[name] then
+      agent_name, identity = name, identities[name]
+      break
+    end
+    agent_name = agent_name or (clean(name) ~= "" and clean(name) or nil)
+  end
+  identity = identity or identities[process]
+  local actor = identity and clean(identity.label) or agent_name or process
   if actor ~= "" and (identity or agent_name) and SHOWN_STATES[facts.status] then
     actor = actor .. " (" .. facts.status .. ")"
   end
