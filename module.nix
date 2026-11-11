@@ -13,6 +13,15 @@ let
   cfg = config.programs.sysinit-wezterm;
   stateDir = "${config.home.homeDirectory}/.local/state/wezterm/recovery";
   socketPath = "${config.home.homeDirectory}/.local/state/wezterm/mux.sock";
+  # A stable path keeps the launchd plist unchanged across updates, so a switch
+  # does not reload the agent and kill every persistent pane.
+  muxConfigPath = "${config.xdg.configHome}/wezterm/mux.lua";
+  codecMarker = "${config.home.homeDirectory}/.local/state/wezterm/mux-codec-version";
+  codecVersion = pkgs.runCommand "wezterm-codec-version" { } ''
+    grep -m1 -oE 'CODEC_VERSION: usize = [0-9]+' ${pkgs.wezterm.src}/codec/src/lib.rs |
+      grep -oE '[0-9]+$' > "$out"
+    test -s "$out"
+  '';
   muxConfig = pkgs.writeText "wezterm-mux.lua" ''
     local wezterm = require("wezterm")
     return {
@@ -57,6 +66,11 @@ in
     persistence = {
       enable = lib.mkEnableOption "session snapshots and a persistent local mux";
       service = lib.mkEnableOption "a managed remote mux service";
+      muxBinary = lib.mkOption {
+        type = lib.types.str;
+        default = "${pkgs.wezterm}/bin/wezterm-mux-server";
+        description = "Mux server executable; a stable signed path keeps its privacy grants across updates.";
+      };
     };
     settings = lib.mkOption {
       type = lib.types.attrs;
@@ -72,6 +86,24 @@ in
     home.activation.weztermMuxDirectory = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run mkdir -p ${lib.escapeShellArg "${config.home.homeDirectory}/.local/state/wezterm"}
     '';
+    xdg.configFile."wezterm/mux.lua" = lib.mkIf cfg.persistence.enable { source = muxConfig; };
+    # The agent survives updates, so restart it only when the mux protocol changes;
+    # an older mux would refuse the new GUI.
+    home.activation.weztermMuxProtocol = lib.mkIf (cfg.persistence.service && pkgs.stdenv.isDarwin) (
+      lib.hm.dag.entryAfter [ "setupLaunchAgents" ] ''
+        wanted=$(cat ${codecVersion})
+        marker=${lib.escapeShellArg codecMarker}
+        if [ "$(cat "$marker" 2>/dev/null)" != "$wanted" ]; then
+          domain="gui/$(id -u)/com.roshbhatia.wezterm-mux"
+          if /bin/launchctl print "$domain" >/dev/null 2>&1; then
+            run /bin/launchctl kickstart -k "$domain"
+          fi
+          if [ -z "''${DRY_RUN:-}" ]; then
+            printf '%s\n' "$wanted" > "$marker"
+          fi
+        fi
+      ''
+    );
     systemd.user.services = lib.optionalAttrs (cfg.persistence.service && pkgs.stdenv.isLinux) {
       wezterm-mux = {
         Unit.Description = "Persistent WezTerm mux";
@@ -89,9 +121,9 @@ in
         config = {
           Label = "com.roshbhatia.wezterm-mux";
           ProgramArguments = [
-            "${pkgs.wezterm}/bin/wezterm-mux-server"
+            cfg.persistence.muxBinary
             "--config-file"
-            (toString muxConfig)
+            muxConfigPath
           ];
           RunAtLoad = true;
           KeepAlive = true;
@@ -158,8 +190,8 @@ in
           inherit (cfg.persistence) enable;
           state_dir = stateDir;
           socket_path = socketPath;
-          mux_config = toString muxConfig;
-          mux_binary = "${pkgs.wezterm}/bin/wezterm-mux-server";
+          mux_config = muxConfigPath;
+          mux_binary = cfg.persistence.muxBinary;
           interval = 60;
         };
         picker.command = [ (lib.getExe runner) ];

@@ -125,8 +125,10 @@
                   persistence = {
                     enable = false;
                     service = false;
+                    muxBinary = "/home/test/.nix-profile/bin/wezterm-mux-server";
                   };
                 };
+                xdg.configHome = "/home/test/.config";
                 home.profileDirectory = "/home/test/.nix-profile";
                 home.homeDirectory = "/home/test";
               };
