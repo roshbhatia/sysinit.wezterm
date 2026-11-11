@@ -28,7 +28,39 @@ local function report(failures)
   end)
 end
 
+-- WezTerm runs only the first handler of a synchronous event, so every module's
+-- augment-command-palette handler is collected and served by one that concatenates them.
+local function collect_palette_handlers()
+  local on = wezterm.on
+  local handlers = {}
+  wezterm.on = function(name, callback)
+    if name == "augment-command-palette" then
+      handlers[#handlers + 1] = callback
+      return
+    end
+    return on(name, callback)
+  end
+  return function()
+    wezterm.on = on
+    on("augment-command-palette", function(window, pane)
+      local entries = {}
+      for _, handler in ipairs(handlers) do
+        local ok, result = pcall(handler, window, pane)
+        if not ok then
+          wezterm.log_error("sysinit: command palette handler failed: " .. tostring(result))
+        elseif type(result) == "table" then
+          for _, entry in ipairs(result) do
+            entries[#entries + 1] = entry
+          end
+        end
+      end
+      return entries
+    end)
+  end
+end
+
 function M.build()
+  local finish_palette = collect_palette_handlers()
   local config = {}
   if wezterm.config_builder then
     config = wezterm.config_builder()
@@ -80,6 +112,7 @@ function M.build()
   end
 
   require("sysinit.pkg.validate").setup(config)
+  finish_palette()
 
   return config
 end

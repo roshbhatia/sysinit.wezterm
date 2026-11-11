@@ -57,16 +57,23 @@ if ok then
   local selected = tabline.get_theme().tab.active
   assert(config.colors.selection_fg == selected.fg and config.colors.selection_bg == selected.bg)
 end
-local pane_palette_registered = false
-for _, handler in ipairs(palette_handlers) do
-  local ok, entries = pcall(handler, nil, nil)
-  for _, entry in ipairs(ok and type(entries) == "table" and entries or {}) do
-    if entry.brief == "Pane: swap with" then
-      pane_palette_registered = true
-    end
-  end
+-- WezTerm uses only the first handler, so every module's entries must come from one.
+assert(
+  #palette_handlers == 1,
+  "the command palette has " .. #palette_handlers .. " handlers; WezTerm shows only the first"
+)
+local palette_briefs = {}
+for _, entry in ipairs(palette_handlers[1](nil, nil) or {}) do
+  palette_briefs[entry.brief] = true
 end
-assert(pane_palette_registered, "the pane palette handler was not registered")
+local expected_briefs = { "Pane: swap with" }
+if package.loaded["session_tree_plugin"] then
+  expected_briefs[#expected_briefs + 1] = "Session tree"
+  expected_briefs[#expected_briefs + 1] = "Session: rename current"
+end
+for _, brief in ipairs(expected_briefs) do
+  assert(palette_briefs[brief], brief .. " is missing from the combined command palette")
+end
 local pane_palette = require("sysinit.pkg.pane_palette")
 local briefs = {}
 for _, entry in ipairs(pane_palette.entries()) do
