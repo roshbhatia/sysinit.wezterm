@@ -57,7 +57,11 @@ end
 
 function M.setup()
   wezterm.on("augment-command-palette", function()
-    return M.entries()
+    local entries = M.entries()
+    for _, entry in ipairs(require("sysinit.pkg.domains").attach_entries()) do
+      entries[#entries + 1] = entry
+    end
+    return entries
   end)
 end
 
