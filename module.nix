@@ -41,7 +41,7 @@ let
         builtins.toJSON (builtins.toJSON (cfg.settings.shell or [ (lib.getExe pkgs.zsh) ]))
       }),
       set_environment_variables = wezterm.json_parse(${builtins.toJSON (builtins.toJSON cfg.environment)}),
-      scrollback_lines = 3500,
+      scrollback_lines = ${toString (lib.max 3500 (cfg.settings.persistence.scrollback_lines or 0))},
       unset_environment_variables = wezterm.json_parse(${
         builtins.toJSON (builtins.toJSON (cfg.settings.unsetEnvironmentVariables or [ ]))
       }),
