@@ -516,17 +516,23 @@ function M.forget(name)
 end
 
 -- The mux server owns snapshots: it restores on startup, before any GUI attaches,
--- and saves on a timer. Timers only run once started from an event in the mux.
+-- and saves on a timer. A config reload drops the running timer and mux-startup
+-- does not fire again, so each later evaluation restarts the chain itself; the
+-- generation stops any chain an earlier evaluation left behind.
 function M.setup_mux(opts)
   settings = opts
   settings.mode = "mux"
   wezterm.run_child_process({ "mkdir", "-p", settings.state_dir })
-  wezterm.on("mux-startup", function()
-    M.restore()
+  wezterm.GLOBAL.recovery_generation = (wezterm.GLOBAL.recovery_generation or 0) + 1
+  local generation = wezterm.GLOBAL.recovery_generation
+  local request = settings.state_dir .. "/save-request"
+  local function start_saving()
     ready = true
-    local request = settings.state_dir .. "/save-request"
     local elapsed = 0
     local function tick()
+      if wezterm.GLOBAL.recovery_generation ~= generation then
+        return
+      end
       elapsed = elapsed + 2
       local heartbeat = io.open(settings.state_dir .. "/mux-heartbeat", "w")
       if heartbeat then
@@ -545,6 +551,16 @@ function M.setup_mux(opts)
       wezterm.time.call_after(2, tick)
     end
     wezterm.time.call_after(2, tick)
+  end
+  -- Windows exist only once a running mux reloads; a fresh one waits for mux-startup.
+  local has_windows, windows = pcall(wezterm.mux.all_windows)
+  if wezterm.GLOBAL.recovery_mux_started or (has_windows and #windows > 0) then
+    start_saving()
+  end
+  wezterm.on("mux-startup", function()
+    M.restore()
+    wezterm.GLOBAL.recovery_mux_started = true
+    start_saving()
   end)
 end
 

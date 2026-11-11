@@ -249,7 +249,10 @@ local recovery_opts = {
   mux_binary = "/fixture/mux",
   mux_config = "/fixture/config",
 }
+local live_windows = windows
+windows = {}
 recovery.setup_mux(recovery_opts)
+windows = live_windows
 assert(not recovery.save(), "the mux saved before mux-startup restored its snapshot")
 events["mux-startup"]()
 assert(recovery.save(), table.concat(operations, "\n"))
@@ -340,6 +343,16 @@ for _, entry in ipairs(queued) do
   end
 end
 assert(not io.open(state_dir .. "/save-request", "r"), "the mux did not consume a save request")
+timers = {}
+package.loaded["sysinit.pkg.recovery"] = nil
+local reloaded = require("sysinit.pkg.recovery")
+reloaded.setup_mux(recovery_opts)
+local pending = timers
+timers = {}
+assert(#pending == 1 and pending[1][1] == 2, "a config reload did not restart the mux save timer")
+pending[1][2]()
+assert(#timers == 1, "the reloaded save timer did not keep running")
+package.loaded["sysinit.pkg.recovery"] = recovery
 recovery_opts.scrollback_lines = 50
 recovery_opts.agent_resume = { claude = { "claude", "--continue" } }
 windows = { make_window("gamma", "local", "/fixture") }
