@@ -66,6 +66,9 @@ local function make_pane(domain, cwd, tab)
   function pane:activate()
     self.tab_ref.selected = self
   end
+  function pane:send_text(text)
+    self.sent = (self.sent or "") .. text
+  end
   function pane:split(args)
     local child = make_pane(args.domain and args.domain.DomainName or self.domain, args.cwd, self.tab_ref)
     self.tab_ref.positions[#self.tab_ref.positions + 1] = { left = 41, top = 0, width = 39, height = 24, pane = child }
@@ -237,12 +240,14 @@ tab.positions[#tab.positions + 1] = {
   is_active = false,
   pane = make_pane("local", "/fixture", tab),
 }
-recovery.setup({}, {
+local recovery_opts = {
   state_dir = state_dir,
   socket_path = "/fixture/socket",
   mux_binary = "/fixture/mux",
   mux_config = "/fixture/config",
-})
+  epoch_path = state_dir .. "/epoch",
+}
+recovery.setup({}, recovery_opts)
 assert(recovery.save(), table.concat(operations, "\n"))
 local file = assert(io.open(state_dir .. "/session.json"))
 local snapshot = native.json_parse(file:read("*a"))
@@ -296,6 +301,103 @@ for _, workspace in ipairs(native.json_parse(pruned:read("*a")).workspaces) do
   assert(workspace.workspace ~= "alpha", "forget left the snapshot in place")
 end
 pruned:close()
+local fixture_read_dir = fake.read_dir
+fake.read_dir = function(path)
+  if path:sub(1, #state_dir) == state_dir then
+    return native.read_dir(path)
+  end
+  return fixture_read_dir(path)
+end
+local function write_epoch(value)
+  local epoch = assert(io.open(state_dir .. "/epoch", "w"))
+  epoch:write(value)
+  epoch:close()
+end
+local function read_snapshot()
+  local handle = assert(io.open(state_dir .. "/session.json"))
+  local decoded = native.json_parse(handle:read("*a"))
+  handle:close()
+  return decoded
+end
+write_epoch("100")
+assert(recovery.save())
+assert(read_snapshot().mux_epoch == "100", "the snapshot did not record the mux epoch")
+local recorded = #recovery.history()
+assert(recorded >= 1, "a save left no snapshot history")
+assert(recovery.save() and #recovery.history() == recorded, "an unchanged save added a history entry")
+local before_restart = #read_snapshot().workspaces
+windows, attached = {}, false
+write_epoch("200")
+assert(recovery.save(), table.concat(operations, "\n"))
+assert(#windows > 0, "a restarted mux was saved over instead of restored")
+local after_restart = read_snapshot()
+assert(
+  after_restart.mux_epoch == "200" and #after_restart.workspaces == before_restart,
+  "the snapshot lost sessions after a mux restart"
+)
+local restored_windows = #windows
+windows = {}
+assert(recovery.save() and #windows == 0, "the same epoch restored twice")
+windows = {}
+for _ = 1, restored_windows do
+  windows[#windows + 1] = make_window("alpha", "unix", "/fixture")
+end
+recovery_opts.scrollback_lines = 50
+recovery_opts.agent_resume = { claude = { "claude", "--continue" } }
+windows = { make_window("gamma", "unix", "/fixture") }
+local shell_pane = windows[1].selected.selected
+local agent_pane = shell_pane:split({ cwd = "/fixture" })
+shell_pane.is_alt_screen_active = function()
+  return false
+end
+shell_pane.get_lines_as_text = function()
+  return "old output\n\n"
+end
+package.loaded["sysinit.pkg.ui.panes"] = {
+  facts = function(id)
+    return { agent = id == agent_pane.id and "claude" or nil }
+  end,
+}
+assert(recovery.save(), table.concat(operations, "\n"))
+local annotated = {}
+for _, saved_workspace in ipairs(read_snapshot().workspaces) do
+  if saved_workspace.workspace == "gamma" then
+    local function walk(node)
+      annotated[#annotated + 1] = node
+      if node.right then
+        walk(node.right)
+      end
+      if node.bottom then
+        walk(node.bottom)
+      end
+    end
+    walk(saved_workspace.window_states[1].tabs[1].pane_tree)
+  end
+end
+local scrollback_node, resume_node
+for _, node in ipairs(annotated) do
+  scrollback_node = scrollback_node or (node.scrollback and node)
+  resume_node = resume_node or (node.resume and node)
+end
+assert(scrollback_node and scrollback_node.scrollback == "old output", "scrollback was not captured")
+assert(resume_node and resume_node.resume == "claude" and not resume_node.scrollback, "the agent pane was not marked")
+local newest = assert(io.open(recovery.history()[1].path))
+assert(not newest:read("*a"):find("old output", 1, true), "snapshot history kept scrollback")
+newest:close()
+windows, attached = {}, false
+assert(recovery.restore("gamma"), table.concat(operations, "\n"))
+local sent = {}
+for _, position in ipairs(windows[1].selected.positions) do
+  sent[#sent + 1] = position.pane.sent or ""
+end
+local replayed, typed = false, false
+for _, text in ipairs(sent) do
+  replayed = replayed or (text:find("/bin/cat '", 1, true) ~= nil and text:sub(-1) == "\r")
+  typed = typed or text == "claude --continue"
+end
+assert(replayed, "the restored shell did not replay its scrollback")
+assert(typed, "the agent resume command was not typed without Enter")
+recovery_opts.scrollback_lines, recovery_opts.agent_resume = 0, nil
 windows, attached = {}, false
 events["gui-startup"]({ args = { "explicit-command" } })
 assert(#windows == 0, "explicit launch restored unrelated windows")

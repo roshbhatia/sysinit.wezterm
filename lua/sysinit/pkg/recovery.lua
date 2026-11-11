@@ -7,11 +7,85 @@ local settings = {}
 local busy = false
 local ready = false
 local deferred = {}
+local restored_epoch
 local read_session
+local HISTORY_LIMIT = 20
 pane_tree.capture_text = false
 
 local function report(message)
   wezterm.log_warn("session recovery: " .. tostring(message))
+end
+
+local function mux_epoch()
+  local file = settings.epoch_path and io.open(settings.epoch_path, "r")
+  if not file then
+    return nil
+  end
+  local epoch = file:read("*l")
+  file:close()
+  return epoch ~= "" and epoch or nil
+end
+
+-- Annotates each pane before its process handle is dropped: an agent pane keeps the
+-- agent to resume, any other primary-screen pane keeps its recent scrollback.
+local function annotate_tree(node, panes)
+  local pane = panes[tostring(node.left) .. ":" .. tostring(node.top)]
+  if pane then
+    local cwd = node.cwd
+    local ok, facts = pcall(function()
+      return require("sysinit.pkg.ui.panes").facts(pane:pane_id(), cwd)
+    end)
+    local agent = ok and facts and facts.agent
+    if agent and (settings.agent_resume or {})[agent] then
+      node.resume = agent
+    elseif (settings.scrollback_lines or 0) > 0 then
+      local alt_ok, alt = pcall(function()
+        return pane:is_alt_screen_active()
+      end)
+      local text_ok, text = pcall(function()
+        return pane:get_lines_as_text(settings.scrollback_lines)
+      end)
+      if alt_ok and not alt and text_ok and type(text) == "string" then
+        text = text:gsub("%s+$", "")
+        node.scrollback = text ~= "" and text or nil
+      end
+    end
+  end
+  if node.right then
+    annotate_tree(node.right, panes)
+  end
+  if node.bottom then
+    annotate_tree(node.bottom, panes)
+  end
+end
+
+local function strip_scrollback(node)
+  node.scrollback = nil
+  if node.right then
+    strip_scrollback(node.right)
+  end
+  if node.bottom then
+    strip_scrollback(node.bottom)
+  end
+end
+
+-- inject_output is a no-op on mux-client panes, so the restored shell prints the
+-- saved text itself. Resume commands are typed, not run, so nothing starts unreviewed.
+local function restore_pane(node)
+  local pane = node.pane
+  if not pane then
+    return
+  end
+  if type(node.scrollback) == "string" then
+    local path = settings.state_dir .. "/replay-" .. tostring(pane:pane_id()) .. "-" .. tostring(os.time()) .. ".txt"
+    if file_io.write_file(path, node.scrollback .. "\n") then
+      pane:send_text(" /bin/cat '" .. path .. "'; /bin/rm -f '" .. path .. "'\r")
+    end
+  end
+  local command = node.resume and (settings.agent_resume or {})[node.resume]
+  if type(command) == "table" and #command > 0 then
+    pane:send_text(wezterm.shell_join_args(command))
+  end
 end
 
 local function local_domain(name)
@@ -41,6 +115,7 @@ function M.capture()
     active = wezterm.mux.get_active_workspace(),
     slots = wezterm.GLOBAL.workspace_slots,
     native_workspaces = wezterm.GLOBAL.native_workspaces,
+    mux_epoch = mux_epoch(),
     workspaces = {},
   }
   local grouped = {}
@@ -72,7 +147,12 @@ function M.capture()
       end
       if #tiled > 0 then
         local zoomed = tiled[1].is_zoomed
+        local by_position = {}
+        for _, position in ipairs(tiled) do
+          by_position[tostring(position.left) .. ":" .. tostring(position.top)] = position.pane
+        end
         local tree = pane_tree.create_pane_tree(tiled)
+        annotate_tree(tree, by_position)
         clean_tree(tree)
         saved_window.tabs[#saved_window.tabs + 1] = {
           title = tab:get_title(),
@@ -97,9 +177,57 @@ local function write_snapshot(path, state)
   assert(file_io.move_file(staged, path))
 end
 
+local function history_dir()
+  return settings.state_dir .. "/history"
+end
+
+function M.history()
+  local entries = {}
+  local ok, paths = pcall(wezterm.read_dir, history_dir())
+  for _, path in ipairs(ok and paths or {}) do
+    local stamp = path:match("(%d+T%d+)%.json$")
+    if stamp then
+      entries[#entries + 1] = { path = path, stamp = stamp }
+    end
+  end
+  table.sort(entries, function(a, b)
+    return a.stamp > b.stamp
+  end)
+  return entries
+end
+
+-- Keeps a bounded trail of distinct snapshots, so one bad save cannot erase the last good layout.
+local function record_history(encoded)
+  local entries = M.history()
+  if entries[1] then
+    local file = io.open(entries[1].path, "r")
+    local last = file and file:read("*a")
+    if file then
+      file:close()
+    end
+    if last == encoded then
+      return
+    end
+  end
+  wezterm.run_child_process({ "mkdir", "-p", history_dir() })
+  local path = history_dir() .. "/" .. os.date("%Y%m%dT%H%M%S") .. ".json"
+  assert(file_io.write_file(path, encoded))
+  for index = HISTORY_LIMIT, #entries do
+    os.remove(entries[index].path)
+  end
+end
+
 function M.save()
   if busy or not ready then
     return false
+  end
+  local epoch = mux_epoch()
+  local saved = read_session(settings.state_dir .. "/session.json")
+  -- A changed epoch means the mux restarted under a running GUI, which never fires
+  -- gui-startup; restore once rather than overwrite the snapshot with the empty mux.
+  if saved and saved.mux_epoch and epoch and saved.mux_epoch ~= epoch and restored_epoch ~= epoch then
+    restored_epoch = epoch
+    M.restore()
   end
   local ok, err = pcall(function()
     local state = M.capture()
@@ -121,6 +249,15 @@ function M.save()
       write_snapshot(path .. ".bak", previous)
     end
     write_snapshot(path, state)
+    local light = wezterm.json_parse(wezterm.json_encode(state))
+    for _, workspace in ipairs(light.workspaces) do
+      for _, saved_window in ipairs(workspace.window_states) do
+        for _, saved_tab in ipairs(saved_window.tabs) do
+          strip_scrollback(saved_tab.pane_tree)
+        end
+      end
+    end
+    record_history(wezterm.json_encode(light))
   end)
   if not ok then
     report(err)
@@ -307,7 +444,7 @@ local function restore_state(state, selected_workspace, fresh)
                   })
                   window:set_title(saved_window.title or "")
                 end
-                tab_state.restore_tab(tab, saved_tab, { pane = pane, relative = true })
+                tab_state.restore_tab(tab, saved_tab, { pane = pane, relative = true, on_pane_restore = restore_pane })
                 restore_float(tab, saved_tab.floating)
                 if saved_tab.is_zoomed then
                   tab:set_zoomed(true)
@@ -463,6 +600,44 @@ function M.setup(config, opts)
               action = wezterm.action_callback(function(_, _, name)
                 if name then
                   M.restore(name)
+                end
+              end),
+            }),
+            pane
+          )
+        end),
+      },
+      {
+        brief = "Session: restore from snapshot history",
+        action = wezterm.action_callback(function(window, pane)
+          local choices = {}
+          for _, entry in ipairs(M.history()) do
+            local state = read_session(entry.path)
+            if state then
+              local names = {}
+              for _, workspace in ipairs(state.workspaces) do
+                names[#names + 1] = workspace.workspace
+              end
+              local y, mo, d, h, mi = entry.stamp:match("^(%d%d%d%d)(%d%d)(%d%d)T(%d%d)(%d%d)")
+              choices[#choices + 1] = {
+                id = entry.path,
+                label = string.format("%s-%s-%s %s:%s  %s", y, mo, d, h, mi, table.concat(names, ", ")),
+              }
+            end
+          end
+          if #choices == 0 then
+            window:toast_notification("Session", "no snapshot history yet", nil, 3000)
+            return
+          end
+          window:perform_action(
+            wezterm.action.InputSelector({
+              title = "Restore snapshot (live sessions are kept)",
+              choices = choices,
+              action = wezterm.action_callback(function(_, _, path)
+                local state = path and read_session(path)
+                if state then
+                  state.slots, state.native_workspaces, state.active = nil, nil, nil
+                  restore_state(state, nil, false)
                 end
               end),
             }),
