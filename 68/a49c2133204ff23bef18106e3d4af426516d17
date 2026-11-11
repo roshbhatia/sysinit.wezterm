@@ -1,0 +1,19 @@
+flake.lock
+  s_40977c61bb7e81::t_9f3aeda5078c5c 34-35,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "68a49c2133204ff23bef18106e3d4af426516d17",
+  "prompts": {},
+  "sessions": {
+    "s_40977c61bb7e81": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "s_40977c61bb7e81",
+        "model": "unknown"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
