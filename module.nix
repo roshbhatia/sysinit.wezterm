@@ -16,8 +16,6 @@ let
   # A stable path keeps the launchd plist unchanged across updates, so a switch
   # does not reload the agent and kill every persistent pane.
   muxConfigPath = "${config.xdg.configHome}/wezterm/mux.lua";
-  # The mux records its own pid so the GUI can tell a restarted mux from a reattach.
-  epochPath = "${config.home.homeDirectory}/.local/state/wezterm/mux-epoch";
   codecMarker = "${config.home.homeDirectory}/.local/state/wezterm/mux-codec-version";
   codecVersion = pkgs.runCommand "wezterm-codec-version" { } ''
     grep -m1 -oE 'CODEC_VERSION: usize = [0-9]+' ${pkgs.wezterm.src}/codec/src/lib.rs |
@@ -26,14 +24,12 @@ let
   '';
   muxConfig = pkgs.writeText "wezterm-mux.lua" ''
     local wezterm = require("wezterm")
-    local pid = wezterm.procinfo.pid()
-    local executable = wezterm.procinfo.executable_path_for_pid(pid) or ""
-    if executable:match("wezterm%-mux%-server$") then
-      local epoch = io.open(${builtins.toJSON epochPath}, "w")
-      if epoch then
-        epoch:write(tostring(pid))
-        epoch:close()
-      end
+    package.path = package.path .. ";${luaSource}/?.lua;${luaSource}/?/init.lua"
+    local utils = require("sysinit.pkg.utils")
+    local data = utils.load_json_file(utils.get_config_path("config.json")) or {}
+    if type(data.persistence) == "table" and data.persistence.enable then
+      require("sysinit.pkg.ui.panes").configure(data.agents or {})
+      require("sysinit.pkg.recovery").setup_mux(data.persistence)
     end
     return {
       unix_domains = { { name = "unix", socket_path = ${builtins.toJSON socketPath} } },
@@ -202,7 +198,6 @@ in
           state_dir = stateDir;
           socket_path = socketPath;
           mux_config = muxConfigPath;
-          epoch_path = epochPath;
           scrollback_lines = 0;
           agent_resume = cfg.settings.agentResume or { };
           mux_binary = cfg.persistence.muxBinary;

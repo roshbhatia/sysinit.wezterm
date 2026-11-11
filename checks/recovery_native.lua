@@ -69,6 +69,9 @@ local function make_pane(domain, cwd, tab)
   function pane:send_text(text)
     self.sent = (self.sent or "") .. text
   end
+  function pane:inject_output(text)
+    self.injected = (self.injected or "") .. text
+  end
   function pane:split(args)
     local child = make_pane(args.domain and args.domain.DomainName or self.domain, args.cwd, self.tab_ref)
     self.tab_ref.positions[#self.tab_ref.positions + 1] = { left = 41, top = 0, width = 39, height = 24, pane = child }
@@ -245,9 +248,10 @@ local recovery_opts = {
   socket_path = "/fixture/socket",
   mux_binary = "/fixture/mux",
   mux_config = "/fixture/config",
-  epoch_path = state_dir .. "/epoch",
 }
-recovery.setup({}, recovery_opts)
+recovery.setup_mux(recovery_opts)
+assert(not recovery.save(), "the mux saved before mux-startup restored its snapshot")
+events["mux-startup"]()
 assert(recovery.save(), table.concat(operations, "\n"))
 local file = assert(io.open(state_dir .. "/session.json"))
 local snapshot = native.json_parse(file:read("*a"))
@@ -259,8 +263,8 @@ windows, attached = {}, false
 connection_window = make_window("alpha", "TermWizTerminalDomain", "/")
 assert(recovery.restore())
 assert(
-  #windows == 2 and windows[1].selected.positions[1].pane.domain == "unix",
-  "local panes were not restored into the mux"
+  #windows == 2 and windows[1].selected.positions[1].pane.domain == "local",
+  "panes were not restored into the mux's own domain"
 )
 assert(windows[1].selected.positions[1].pane.cwd == "/home/fixture", "missing CWD did not fall back")
 for _ = 1, 3 do
@@ -308,43 +312,37 @@ fake.read_dir = function(path)
   end
   return fixture_read_dir(path)
 end
-local function write_epoch(value)
-  local epoch = assert(io.open(state_dir .. "/epoch", "w"))
-  epoch:write(value)
-  epoch:close()
-end
 local function read_snapshot()
   local handle = assert(io.open(state_dir .. "/session.json"))
   local decoded = native.json_parse(handle:read("*a"))
   handle:close()
   return decoded
 end
-write_epoch("100")
 assert(recovery.save())
-assert(read_snapshot().mux_epoch == "100", "the snapshot did not record the mux epoch")
 local recorded = #recovery.history()
 assert(recorded >= 1, "a save left no snapshot history")
 assert(recovery.save() and #recovery.history() == recorded, "an unchanged save added a history entry")
 local before_restart = #read_snapshot().workspaces
 windows, attached = {}, false
-write_epoch("200")
-assert(recovery.save(), table.concat(operations, "\n"))
-assert(#windows > 0, "a restarted mux was saved over instead of restored")
-local after_restart = read_snapshot()
+events["mux-startup"]()
+assert(#windows > 0, "a restarted mux did not restore its snapshot on mux-startup")
 assert(
-  after_restart.mux_epoch == "200" and #after_restart.workspaces == before_restart,
+  recovery.save() and #read_snapshot().workspaces == before_restart,
   "the snapshot lost sessions after a mux restart"
 )
-local restored_windows = #windows
-windows = {}
-assert(recovery.save() and #windows == 0, "the same epoch restored twice")
-windows = {}
-for _ = 1, restored_windows do
-  windows[#windows + 1] = make_window("alpha", "unix", "/fixture")
+local request = assert(io.open(state_dir .. "/save-request", "w"))
+request:close()
+local queued = timers
+timers = {}
+for _, entry in ipairs(queued) do
+  if entry[1] == 2 then
+    entry[2]()
+  end
 end
+assert(not io.open(state_dir .. "/save-request", "r"), "the mux did not consume a save request")
 recovery_opts.scrollback_lines = 50
 recovery_opts.agent_resume = { claude = { "claude", "--continue" } }
-windows = { make_window("gamma", "unix", "/fixture") }
+windows = { make_window("gamma", "local", "/fixture") }
 local shell_pane = windows[1].selected.selected
 local agent_pane = shell_pane:split({ cwd = "/fixture" })
 shell_pane.is_alt_screen_active = function()
@@ -386,21 +384,15 @@ assert(not newest:read("*a"):find("old output", 1, true), "snapshot history kept
 newest:close()
 windows, attached = {}, false
 assert(recovery.restore("gamma"), table.concat(operations, "\n"))
-local sent = {}
-for _, position in ipairs(windows[1].selected.positions) do
-  sent[#sent + 1] = position.pane.sent or ""
-end
 local replayed, typed = false, false
-for _, text in ipairs(sent) do
-  replayed = replayed or (text:find("/bin/cat '", 1, true) ~= nil and text:sub(-1) == "\r")
-  typed = typed or text == "claude --continue"
+for _, position in ipairs(windows[1].selected.positions) do
+  replayed = replayed or (position.pane.injected or ""):find("old output", 1, true) ~= nil
+  typed = typed or position.pane.sent == "claude --continue"
 end
 assert(replayed, "the restored shell did not replay its scrollback")
 assert(typed, "the agent resume command was not typed without Enter")
 recovery_opts.scrollback_lines, recovery_opts.agent_resume = 0, nil
 windows, attached = {}, false
-events["gui-startup"]({ args = { "explicit-command" } })
-assert(#windows == 0, "explicit launch restored unrelated windows")
 local marker = assert(io.open(state_dir .. "/passed", "w"))
 marker:write("passed")
 marker:close()

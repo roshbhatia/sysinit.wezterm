@@ -7,23 +7,12 @@ local settings = {}
 local busy = false
 local ready = false
 local deferred = {}
-local restored_epoch
 local read_session
 local HISTORY_LIMIT = 20
 pane_tree.capture_text = false
 
 local function report(message)
   wezterm.log_warn("session recovery: " .. tostring(message))
-end
-
-local function mux_epoch()
-  local file = settings.epoch_path and io.open(settings.epoch_path, "r")
-  if not file then
-    return nil
-  end
-  local epoch = file:read("*l")
-  file:close()
-  return epoch ~= "" and epoch or nil
 end
 
 -- Annotates each pane before its process handle is dropped: an agent pane keeps the
@@ -69,14 +58,17 @@ local function strip_scrollback(node)
   end
 end
 
--- inject_output is a no-op on mux-client panes, so the restored shell prints the
--- saved text itself. Resume commands are typed, not run, so nothing starts unreviewed.
+-- The mux injects saved text into its own panes; a GUI-side restore holds mux-client
+-- panes, where inject_output is a no-op, so the restored shell prints the text itself.
+-- Resume commands are typed, not run, so nothing starts unreviewed.
 local function restore_pane(node)
   local pane = node.pane
   if not pane then
     return
   end
-  if type(node.scrollback) == "string" then
+  if type(node.scrollback) == "string" and settings.mode == "mux" then
+    pane:inject_output(node.scrollback:gsub("\n", "\r\n") .. "\r\n")
+  elseif type(node.scrollback) == "string" then
     local path = settings.state_dir .. "/replay-" .. tostring(pane:pane_id()) .. "-" .. tostring(os.time()) .. ".txt"
     if file_io.write_file(path, node.scrollback .. "\n") then
       pane:send_text(" /bin/cat '" .. path .. "'; /bin/rm -f '" .. path .. "'\r")
@@ -92,8 +84,14 @@ local function local_domain(name)
   return name == nil or name == "local" or name == "unix"
 end
 
+-- The GUI reaches the persistent mux as its "unix" client domain; inside the mux
+-- server the same panes belong to its own "local" domain.
+local function local_name()
+  return settings.mode == "mux" and "local" or "unix"
+end
+
 local function domain_name(name)
-  return local_domain(name) and "unix" or name
+  return local_domain(name) and local_name() or name
 end
 
 local function clean_tree(node)
@@ -115,7 +113,6 @@ function M.capture()
     active = wezterm.mux.get_active_workspace(),
     slots = wezterm.GLOBAL.workspace_slots,
     native_workspaces = wezterm.GLOBAL.native_workspaces,
-    mux_epoch = mux_epoch(),
     workspaces = {},
   }
   local grouped = {}
@@ -220,14 +217,6 @@ end
 function M.save()
   if busy or not ready then
     return false
-  end
-  local epoch = mux_epoch()
-  local saved = read_session(settings.state_dir .. "/session.json")
-  -- A changed epoch means the mux restarted under a running GUI, which never fires
-  -- gui-startup; restore once rather than overwrite the snapshot with the empty mux.
-  if saved and saved.mux_epoch and epoch and saved.mux_epoch ~= epoch and restored_epoch ~= epoch then
-    restored_epoch = epoch
-    M.restore()
   end
   local ok, err = pcall(function()
     local state = M.capture()
@@ -364,7 +353,7 @@ local function restore_state(state, selected_workspace, fresh)
     deferred = {}
   end
   local unavailable, retained = {}, {}
-  local domains = { unix = true }
+  local domains = { [local_name()] = true }
   for _, workspace in ipairs(state.workspaces) do
     for _, window in ipairs(workspace.window_states) do
       for _, tab in ipairs(window.tabs) do
@@ -526,6 +515,39 @@ function M.forget(name)
   return ok
 end
 
+-- The mux server owns snapshots: it restores on startup, before any GUI attaches,
+-- and saves on a timer. Timers only run once started from an event in the mux.
+function M.setup_mux(opts)
+  settings = opts
+  settings.mode = "mux"
+  wezterm.run_child_process({ "mkdir", "-p", settings.state_dir })
+  wezterm.on("mux-startup", function()
+    M.restore()
+    ready = true
+    local request = settings.state_dir .. "/save-request"
+    local elapsed = 0
+    local function tick()
+      elapsed = elapsed + 2
+      local heartbeat = io.open(settings.state_dir .. "/mux-heartbeat", "w")
+      if heartbeat then
+        heartbeat:write(tostring(os.time()))
+        heartbeat:close()
+      end
+      local requested = io.open(request, "r")
+      if requested then
+        requested:close()
+        os.remove(request)
+      end
+      if requested or elapsed >= (settings.interval or 60) then
+        elapsed = 0
+        M.save()
+      end
+      wezterm.time.call_after(2, tick)
+    end
+    wezterm.time.call_after(2, tick)
+  end)
+end
+
 function M.setup(config, opts)
   settings = opts
   local made = wezterm.run_child_process({ "mkdir", "-p", settings.state_dir })
@@ -540,33 +562,26 @@ function M.setup(config, opts)
   config.default_domain = "unix"
   -- Restore before WezTerm creates a fallback pane in a newly started mux.
   config.default_gui_startup_args = { "start" }
-  local explicit = false
-  local handled = false
-  local has_mux, windows = pcall(wezterm.mux.all_windows)
-  ready = has_mux and #windows > 0
-  wezterm.on("gui-startup", function(command)
-    handled = true
-    explicit = command ~= nil
-    if not explicit then
-      M.restore()
+  -- A mux started before mux-side recovery existed never runs mux-startup again, so
+  -- the GUI keeps saving until the mux reports a fresh heartbeat.
+  local function fallback_save()
+    local heartbeat = io.open(settings.state_dir .. "/mux-heartbeat", "r")
+    local beat = heartbeat and tonumber(heartbeat:read("*l"))
+    if heartbeat then
+      heartbeat:close()
     end
-    ready = true
-  end)
-  wezterm.on("gui-attached", function()
-    if not handled and not explicit then
-      M.restore()
+    if beat and os.time() - beat < 10 then
+      return
     end
-    handled = true
-    ready = true
-  end)
-  wezterm.on("window-focus-changed", function()
-    M.save()
-  end)
-  wezterm.on("pane-focus-changed", function()
-    M.save()
-  end)
+    local ok, windows = pcall(wezterm.mux.all_windows)
+    if ok and #windows > 0 then
+      ready = true
+      M.save()
+    end
+  end
+  wezterm.on("window-focus-changed", fallback_save)
   local function periodic()
-    M.save()
+    fallback_save()
     wezterm.time.call_after(settings.interval or 60, periodic)
   end
   wezterm.time.call_after(settings.interval or 60, periodic)
@@ -574,8 +589,12 @@ function M.setup(config, opts)
     return {
       {
         brief = "Session: save recovery snapshot",
-        action = wezterm.action_callback(function()
-          M.save()
+        action = wezterm.action_callback(function(window)
+          local request = io.open(settings.state_dir .. "/save-request", "w")
+          if request then
+            request:close()
+            window:toast_notification("Session", "snapshot requested from the mux", nil, 3000)
+          end
         end),
       },
       {
