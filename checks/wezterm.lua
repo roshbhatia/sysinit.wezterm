@@ -482,7 +482,7 @@ for _, noun in ipairs({ "chani", "saphira", "locke", "sabetha", "bilbo", "goldbe
 end
 assert(
   require("session_tree.switcher").session_tree_description()
-    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  Esc quit",
+    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  t new tab  m move  r rename  M merge  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
