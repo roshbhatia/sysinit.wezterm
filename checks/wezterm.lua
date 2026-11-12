@@ -482,7 +482,7 @@ for _, noun in ipairs({ "chani", "saphira", "locke", "sabetha", "bilbo", "goldbe
 end
 assert(
   require("session_tree.switcher").session_tree_description()
-    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  t new tab  m move  r rename  M merge  Esc quit",
+    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  X close immediately  t new tab  m move  r rename  M merge  Esc quit",
   "session tree help diverged from its action metadata"
 )
 
@@ -519,7 +519,12 @@ for _, binding in ipairs(session_config.key_tables.session_tree_selector) do
   session_keys[binding.key] = binding
 end
 assert(
-  session_keys["@"] and session_keys["!"] and session_keys["#"] and session_keys["$"] and session_keys.x,
+  session_keys["@"]
+    and session_keys["!"]
+    and session_keys["#"]
+    and session_keys["$"]
+    and session_keys.x
+    and session_keys.X,
   "session actions are absent from the hidden key table"
 )
 assert(session_keys["/"], "slash cannot leave the action layer and enter filtering")
