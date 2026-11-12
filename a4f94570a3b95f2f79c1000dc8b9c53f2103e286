@@ -1,0 +1,19 @@
+flake.lock
+  s_32e57ab9aaf709::t_576c4af6a9ba32 74-75,78
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "a4f94570a3b95f2f79c1000dc8b9c53f2103e286",
+  "prompts": {},
+  "sessions": {
+    "s_32e57ab9aaf709": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "96e8b16a-4b50-4940-8388-b413bf5ba6de",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}

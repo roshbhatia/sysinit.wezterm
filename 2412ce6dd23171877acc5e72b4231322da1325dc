@@ -1,0 +1,21 @@
+lua/sysinit/pkg/domains.lua
+  s_823df142a94f27::t_76b09e4fa04978 117-129
+lua/sysinit/pkg/pane_palette.lua
+  s_823df142a94f27::t_cefc028e416dcc 60-64
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "2412ce6dd23171877acc5e72b4231322da1325dc",
+  "prompts": {},
+  "sessions": {
+    "s_823df142a94f27": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e37c8c01-c1a2-4d87-94a7-b84ec196ba06",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
