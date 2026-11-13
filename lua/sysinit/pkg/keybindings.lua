@@ -47,17 +47,6 @@ local TRACE_KEYS = (function()
   return both
 end)()
 
-local WINDOW_PREFIX = (function()
-  local both = {}
-  for _, name in ipairs(READLINE) do
-    both[#both + 1] = name
-  end
-  both[#both + 1] = "slk"
-  both[#both + 1] = "traces"
-  both[#both + 1] = "orc"
-  return both
-end)()
-
 local TRACE_NAV = (function()
   local both = {}
   for _, name in ipairs(EDITORS) do
@@ -125,6 +114,27 @@ local function host_action(kind, local_host)
   end
 end
 
+local function close_or_detach()
+  return act.InputSelector({
+    title = "Close or detach?",
+    description = "Enter select  Esc cancel",
+    alphabet = "12",
+    fuzzy = false,
+    scope = "Auto",
+    choices = {
+      { id = "close", label = "Close (end this pane's process)" },
+      { id = "detach", label = "Detach (keep mux sessions running)" },
+    },
+    action = wezterm.action_callback(function(inner_window, inner_pane, choice)
+      if choice == "close" then
+        inner_window:perform_action(act.CloseCurrentPane({ confirm = false }), inner_pane)
+      elseif choice == "detach" then
+        inner_window:perform_action(act.DetachDomain("CurrentPaneDomain"), inner_pane)
+      end
+    end),
+  })
+end
+
 local function get_pane_keys()
   local DIRECTION_KEYS = { h = "Left", j = "Down", k = "Up", l = "Right" }
   local keys = {
@@ -171,14 +181,9 @@ local function get_pane_keys()
     table.insert(keys, create_smart_keybind(binding[1], "SUPER|CTRL", { AdjustPaneSize = { binding[2], 3 } }))
   end
 
-  for _, binding in
-    -- CTRL-w is the window prefix in editors, Traces, and Orc, and readline's
-    -- kill-word. SUPER-w keeps pane close reachable in every context.
-    ipairs(create_multi_mod_bindings("w", function()
-      return act.CloseCurrentPane({ confirm = true })
-    end, nil, { passthrough = WINDOW_PREFIX }))
-  do
-    table.insert(keys, binding)
+  for _, mods in ipairs(COMMON_MODS) do
+    table.insert(keys, create_smart_keybind("w", mods, close_or_detach))
+    table.insert(keys, create_smart_keybind("w", mods .. "|SHIFT", act.CloseCurrentPane({ confirm = false })))
   end
 
   return keys
@@ -201,13 +206,14 @@ local function pane_cwd(pane)
   return (path:gsub("/+$", ""))
 end
 
-local function watch_keybind(key, describe, build_args)
+local function watch_keybind(key, describe, build_args, mods)
+  mods = mods or "SUPER|SHIFT"
   return {
     key = key,
-    mods = "SUPER|SHIFT",
+    mods = mods,
     action = wezterm.action_callback(function(win, pane)
       if M.locked_mode then
-        win:perform_action({ SendKey = { key = key, mods = "SUPER|SHIFT" } }, pane)
+        win:perform_action({ SendKey = { key = key, mods = mods } }, pane)
         return
       end
       local args = build_args(pane)
@@ -272,7 +278,7 @@ local function get_system_keys()
         return nil
       end
       return { "worker", cwd }
-    end),
+    end, "SUPER|CTRL|SHIFT"),
     watch_keybind("b", "no working directory", function(pane)
       local cwd = pane_cwd(pane)
       if not cwd then
@@ -304,7 +310,6 @@ end
 
 local function get_tab_keys()
   local keys = {
-    create_smart_keybind("w", "CTRL|SHIFT", act.CloseCurrentTab({ confirm = true })),
     create_smart_keybind("Tab", "CTRL", act.ActivateTabRelative(1)),
     create_smart_keybind("Tab", "CTRL|SHIFT", act.ActivateTabRelative(-1)),
     create_smart_keybind("o", "CTRL|SHIFT", act.ActivateLastTab),

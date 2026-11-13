@@ -227,13 +227,19 @@ priority over upstream defaults.
 | Precision pane resize | Cmd+Ctrl+arrows, Ctrl+Shift+H/J/K/L | Super+Ctrl+arrows, Ctrl+Shift+H/J/K/L |
 | Split down / right on current host | Ctrl+S / Ctrl+V | Ctrl+S / Ctrl+V |
 | Split down / right locally | Ctrl+Shift+S / Ctrl+Shift+V; Cmd+Shift+V alias | Ctrl+Shift+S / Super+Shift+V |
-| Close pane / close tab | Cmd+W / Ctrl+Shift+W | Super+W / Ctrl+Shift+W |
+| Close or detach | Cmd+W, Ctrl+W | Super+W, Ctrl+W |
+| Close focused pane immediately | Cmd+Shift+W, Ctrl+Shift+W | Super+Shift+W, Ctrl+Shift+W |
+
+The close picker offers Close to end the focused pane's process, or Detach to
+disconnect this GUI from the pane's mux domain while keeping its sessions running.
+Esc cancels. Ctrl+W still deletes a word inside picker filters.
 
 Ctrl+H/J/K/L pane navigation, Ctrl+M zoom, Ctrl+N rotation, Ctrl+F quick select,
 Ctrl+Tab tab cycling, Ctrl+Shift+comma/period tab movement, and Ctrl+G locked
 mode keep their existing meanings. Cmd/Super+S opens the session tree;
-Cmd/Super+Shift+W/B opens the worker/bus watcher; Cmd/Super+Shift+L opens theme
-controls. These custom shortcuts remain reachable without Alt.
+Cmd/Super+Ctrl+Shift+W opens the worker watcher; Cmd/Super+Shift+B opens the bus
+watcher; Cmd/Super+Shift+L opens theme controls. These custom shortcuts remain
+reachable without Alt.
 
 Workspace shortcuts avoid Cmd/Super+Shift+3/4/5 screenshots on both platforms.
 The Linux map also avoids Sway's Ctrl+Shift+Left/Right workspace cycling.

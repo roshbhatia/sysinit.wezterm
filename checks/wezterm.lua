@@ -415,17 +415,21 @@ current_process = "traces"
 key_binding("f", "CTRL").action(window, pane)
 assert(performed[13].SendKey.key == "f", "CTRL-f did not reach Traces")
 key_binding("w", "CTRL").action(window, pane)
-assert(performed[14].SendKey.key == "w", "CTRL-w did not reach Traces")
+assert(performed[14].InputSelector, "CTRL-w did not open the close choice from Traces")
 current_process = "orc"
 key_binding("f", "CTRL").action(window, pane)
 assert(performed[15].SendKey.key == "f", "CTRL-f did not reach Orc")
 key_binding("w", "CTRL").action(window, pane)
-assert(performed[16].SendKey.key == "w", "CTRL-w did not reach Orc")
+assert(performed[16].InputSelector, "CTRL-w did not open the close choice from Orc")
 current_process = "slk"
 for _, key in ipairs({ "n", "w" }) do
   local before = #performed
   key_binding(key, "CTRL").action(window, pane)
-  assert(performed[before + 1].SendKey.key == key, "CTRL-" .. key .. " did not reach slk")
+  if key == "w" then
+    assert(performed[before + 1].InputSelector, "CTRL-w did not open the close choice from slk")
+  else
+    assert(performed[before + 1].SendKey.key == key, "CTRL-" .. key .. " did not reach slk")
+  end
 end
 current_process = "traces"
 local before = #performed
@@ -474,13 +478,27 @@ for _, key in ipairs({ "w", "u" }) do
 end
 local before_super_close = #performed
 key_binding("w", "SUPER").action(window, pane)
-assert(performed[before_super_close + 1].CloseCurrentPane, "SUPER-w lost the terminal close action")
+assert(performed[before_super_close + 1].InputSelector, "SUPER-w did not offer close or detach")
 displayed_pane = pane
 local before_terminal = #performed
 key_binding("w", "CTRL").action(window, pane)
 key_binding("u", "CTRL").action(window, pane)
-assert(performed[before_terminal + 1].CloseCurrentPane, "ordinary pane close changed")
+assert(performed[before_terminal + 1].InputSelector, "CTRL-w did not offer close or detach")
 assert(performed[before_terminal + 2].ScrollByLine == -40, "ordinary terminal scrolling changed")
+for _, mods in ipairs({ "CTRL", "SUPER" }) do
+  key_binding("w", mods).action(window, pane)
+  local close_choice = assert(performed[#performed].InputSelector)
+  assert(close_choice.choices[1].id == "close" and close_choice.choices[2].id == "detach")
+  local before_cancel = #performed
+  close_choice.action(window, pane, nil)
+  assert(#performed == before_cancel, "cancelling the close choice changed the session")
+  close_choice.action(window, pane, "close")
+  assert(performed[#performed].CloseCurrentPane.confirm == false, "close asked for confirmation twice")
+  close_choice.action(window, pane, "detach")
+  assert(performed[#performed].DetachDomain == "CurrentPaneDomain", "detach targeted another domain")
+  key_binding("w", mods .. "|SHIFT").action(window, pane)
+  assert(performed[#performed].CloseCurrentPane.confirm == false, "shift-close asked for confirmation")
+end
 
 require("session_tree.options").configure({
   picker = require("sysinit.pkg.utils").load_json_file("config.json").picker,
