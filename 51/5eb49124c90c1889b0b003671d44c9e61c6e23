@@ -1,0 +1,22 @@
+lua/sysinit/pkg/keybindings.lua
+  s_7028fc5da01072::t_84b4257fc001c8 94-109
+checks/wezterm.lua
+  s_7028fc5da01072::t_84b4257fc001c8 345-348
+  s_7028fc5da01072::t_26a5b5c781ef94 342,350,362-373,462-483
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "515eb49124c90c1889b0b003671d44c9e61c6e23",
+  "prompts": {},
+  "sessions": {
+    "s_7028fc5da01072": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d0ac-4380-7023-8b2f-a382ea7a16c4",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
