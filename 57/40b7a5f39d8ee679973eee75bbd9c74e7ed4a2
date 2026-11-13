@@ -1,0 +1,25 @@
+README.md
+  s_7028fc5da01072::t_0c90bc2e07dc00 230-235,240-242
+lua/sysinit/pkg/keybindings.lua
+  s_7028fc5da01072::t_bf4779be7b0832 117-118,135,185
+  s_7028fc5da01072::t_70e8b333181ea8 119-134,184,186
+  s_7028fc5da01072::t_ff61bd6c5412d4 209-210,213,216,281
+checks/wezterm.lua
+  s_7028fc5da01072::t_4aaeaffbcb03fe 418,423,428-432,481,486,488-501
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5740b7a5f39d8ee679973eee75bbd9c74e7ed4a2",
+  "prompts": {},
+  "sessions": {
+    "s_7028fc5da01072": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d0ac-4380-7023-8b2f-a382ea7a16c4",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
