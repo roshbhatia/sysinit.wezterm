@@ -29,8 +29,14 @@ function M.setup(config)
   wezterm.on("update-status", function(window, pane)
     local ok, scrollable = pcall(function()
       local active = window:mux_window():active_pane()
+      local displayed = window:active_pane()
       -- Config overrides clear key tables, so overlays must not change the scroll bar.
-      if not active or active:pane_id() ~= pane:pane_id() then
+      if
+        not active
+        or not displayed
+        or active:pane_id() ~= displayed:pane_id()
+        or active:pane_id() ~= pane:pane_id()
+      then
         return nil
       end
       local dimensions = pane:get_dimensions()

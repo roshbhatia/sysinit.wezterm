@@ -596,7 +596,7 @@ for _, shortcut in ipairs({ "!", "@", "#", "$", "%" }) do
   end
   assert(#tree_actions == before_repeat, "repeated opening stacked a persistent key table")
   for _, binding in ipairs(second_config.key_tables.session_tree_selector) do
-    if binding.key == shortcut then
+    if binding.key == shortcut and binding.mods == "SHIFT" then
       binding.action(tree_window, pane)
     end
   end
@@ -1239,11 +1239,18 @@ assert(set_override_calls == 2, "a picker overlay reloaded the window and cleare
 assert(overrides.enable_scroll_bar == nil, "a picker overlay changed the terminal scroll bar")
 handlers["update-status"](event_window, event_pane)
 assert(set_override_calls == 2, "closing a picker reloaded an unchanged terminal")
+active_event_id = 99
+alt_screen = true
+handlers["update-status"](event_window, event_pane)
+assert(set_override_calls == 2, "a queued terminal event reloaded a visible picker")
+active_event_id = 1
+alt_screen = false
 
 local second_overrides = { second_window = true }
 local second_get_calls = 0
 local second_set_calls = 0
 local second_window = {
+  active_pane = event_window.active_pane,
   mux_window = event_window.mux_window,
   window_id = function()
     return 2
@@ -1268,6 +1275,7 @@ assert(second_get_calls == 1 and second_set_calls == 1, "the second window reapp
 local inherited_overrides = { enable_scroll_bar = false, external = "kept" }
 local inherited_sets = 0
 local inherited_window = {
+  active_pane = event_window.active_pane,
   mux_window = event_window.mux_window,
   window_id = function()
     return 3
