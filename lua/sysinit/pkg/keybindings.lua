@@ -91,7 +91,22 @@ smart_keys.apply_to_config({}, {
   process_name = utils.get_process_name,
   app_user_var = "SYSINIT_APP",
 })
-local create_smart_keybind = smart_keys.binding
+local function create_smart_keybind(key, mods, action, opts)
+  local binding = smart_keys.binding(key, mods, action, opts)
+  if mods == "CTRL" and (key == "w" or key == "u") then
+    local fallback = binding.action
+    binding.action = wezterm.action_callback(function(window, pane)
+      local displayed = window:active_pane()
+      local active = window:mux_window():active_pane()
+      if displayed and active and displayed:pane_id() ~= active:pane_id() then
+        window:perform_action(act.SendKey({ key = key, mods = mods }), displayed)
+      else
+        window:perform_action(fallback, pane)
+      end
+    end)
+  end
+  return binding
+end
 
 local function create_multi_mod_bindings(key, action_fn, mod_list, opts)
   local bindings = {}

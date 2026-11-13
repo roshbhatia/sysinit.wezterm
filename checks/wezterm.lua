@@ -339,10 +339,15 @@ assert(
 )
 
 local performed = {}
+local performed_targets = {}
 local pane_vars = { IS_NVIM = "true" }
 local window = {
-  perform_action = function(_, value)
+  perform_action = function(self, value, target)
+    if type(value) == "function" then
+      return value(self, target)
+    end
     performed[#performed + 1] = value
+    performed_targets[#performed] = target
   end,
 }
 local pane = {
@@ -353,6 +358,18 @@ local pane = {
     return pane_vars
   end,
 }
+
+local displayed_pane = pane
+window.active_pane = function()
+  return displayed_pane
+end
+window.mux_window = function()
+  return {
+    active_pane = function()
+      return pane
+    end,
+  }
+end
 
 key_binding("h", "CTRL").action(window, pane)
 assert(performed[1].SendKey.key == "h", "CTRL-h did not pass through to Neovim")
@@ -442,6 +459,28 @@ key_binding("h", "CTRL").action(window, pane)
 assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app captured shell navigation")
 
 pane_vars = {}
+current_process = "python3"
+displayed_pane = {
+  pane_id = function()
+    return 99
+  end,
+}
+for _, key in ipairs({ "w", "u" }) do
+  local before = #performed
+  key_binding(key, "CTRL").action(window, pane)
+  assert(performed[before + 1].SendKey, "overlay filter editing invoked a terminal action")
+  assert(performed[before + 1].SendKey.key == key and performed[before + 1].SendKey.mods == "CTRL")
+  assert(performed_targets[before + 1] == displayed_pane, "filter edit was sent to the covered terminal")
+end
+local before_super_close = #performed
+key_binding("w", "SUPER").action(window, pane)
+assert(performed[before_super_close + 1].CloseCurrentPane, "SUPER-w lost the terminal close action")
+displayed_pane = pane
+local before_terminal = #performed
+key_binding("w", "CTRL").action(window, pane)
+key_binding("u", "CTRL").action(window, pane)
+assert(performed[before_terminal + 1].CloseCurrentPane, "ordinary pane close changed")
+assert(performed[before_terminal + 2].ScrollByLine == -40, "ordinary terminal scrolling changed")
 
 require("session_tree.options").configure({
   picker = require("sysinit.pkg.utils").load_json_file("config.json").picker,
