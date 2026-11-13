@@ -150,6 +150,14 @@ in
     };
     assertions = [
       {
+        assertion = builtins.elem (cfg.settings.picker.placement or "auto") [
+          "auto"
+          "pane"
+          "window"
+        ];
+        message = "WezTerm picker placement must be auto, pane, or window";
+      }
+      {
         assertion = builtins.all (
           p:
           builtins.elem p.key [
@@ -203,7 +211,10 @@ in
           mux_binary = cfg.persistence.muxBinary;
           interval = 60;
         };
-        picker.command = [ (lib.getExe runner) ];
+        picker = {
+          command = [ (lib.getExe runner) ];
+          placement = "auto";
+        };
       } cfg.settings
     );
     xdg.configFile."wezterm/env.json".text = builtins.toJSON cfg.environment;

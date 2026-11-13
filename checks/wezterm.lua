@@ -482,7 +482,7 @@ for _, noun in ipairs({ "chani", "saphira", "locke", "sabetha", "bilbo", "goldbe
 end
 assert(
   require("session_tree.switcher").session_tree_description()
-    == "  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  j/k move  / filter  |  Enter open  x close  X close immediately  t new tab  m move  r rename  M merge  Esc quit",
+    == "Sessions | j/k move  / filter  Enter open  Esc quit  |  ! wezterm  @ tether  # zmx  $ seshy  % zoxide  |  x close  X close immediately  t new tab  m move  r rename  M merge",
   "session tree help diverged from its action metadata"
 )
 
@@ -735,6 +735,12 @@ cached_catalog = valid_catalog
 launcher.open(launch_window, pane, "$")
 local picker = performed[#performed].InputSelector
 assert(picker.title == "Sessions" and #picker.choices == 2, "advertised creation is missing")
+assert(picker.fuzzy == false, "provider picker must start with j/k navigation")
+assert(
+  not picker.alphabet:find("j", 1, true) and not picker.alphabet:find("k", 1, true),
+  "navigation keys became selection labels"
+)
+assert(picker.description:find("/ filter", 1, true), "provider picker does not advertise search")
 assert(picker.choices[1].id == "review", "creation replaced the default existing-session selection")
 assert(#argv == 0, "warm provider opening started a synchronous process")
 picker.action(launch_window, pane, "review")

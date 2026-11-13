@@ -13,6 +13,11 @@ Each plugin also supports plain Lua installation without this configuration.
 `packages.<system>.wezspawn` remains a compatibility alias for spawn.wezterm's CLI.
 The tree shows running workspaces, tabs, and panes.
 Provider shortcuts open another selector without adding inactive entries to the tree.
+The tree and provider views start with `j/k` navigation; `/` starts filtering.
+Set `programs.sysinit-wezterm.settings.picker.placement` to `"auto"` (default),
+`"pane"`, or `"window"`. Auto draws selectors inside a focused floating pane and
+uses the full window from a normal pane. This requires the WezTerm fork's
+`InputSelector.scope` support.
 
 ## Session recovery
 
