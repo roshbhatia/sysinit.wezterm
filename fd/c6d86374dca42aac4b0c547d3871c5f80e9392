@@ -1,0 +1,21 @@
+README.md
+  s_7028fc5da01072::t_d9d7c720461373 26
+flake.lock
+  s_7028fc5da01072::t_754b49ddc6bab1 34-35,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "fdc6d86374dca42aac4b0c547d3871c5f80e9392",
+  "prompts": {},
+  "sessions": {
+    "s_7028fc5da01072": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d0ac-4380-7023-8b2f-a382ea7a16c4",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
