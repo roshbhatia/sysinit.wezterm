@@ -23,7 +23,7 @@ Set `programs.sysinit-wezterm.settings.picker.placement` to `"float"` (default),
 than zero and at most one to change the default popup size. Auto draws selectors
 inside a focused floating pane and uses the full window from a normal pane.
 This requires the WezTerm fork's
-`InputSelector.scope` support.
+`InputSelector.scope` support and its `ActivatePaneById` action for float placement.
 
 ## Session recovery
 
