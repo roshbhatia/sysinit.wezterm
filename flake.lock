@@ -31,11 +31,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794602305,
-        "narHash": "sha256-mXlcuOa9HnZY5pXn4N/oyXFvqnYeHM+igkoL1UZwojk=",
+        "lastModified": 1794616019,
+        "narHash": "sha256-rQJpGK1ZGmNaDAZTzaFEt5+H0BVbLxgGdIRqAhEAoKw=",
         "owner": "roshbhatia",
         "repo": "session-tree.wezterm",
-        "rev": "822d1ae3389cca83c7f94e538d8ccb9b535ff95d",
+        "rev": "2c7e327b82bff820b940028985ff85863e1cbd0f",
         "type": "github"
       },
       "original": {

@@ -14,9 +14,15 @@ Each plugin also supports plain Lua installation without this configuration.
 The tree shows running workspaces, tabs, and panes.
 Provider shortcuts open another selector without adding inactive entries to the tree.
 The tree and provider views start with `j/k` navigation; `/` starts filtering.
-Set `programs.sysinit-wezterm.settings.picker.placement` to `"auto"` (default),
-`"pane"`, or `"window"`. Auto draws selectors inside a focused floating pane and
-uses the full window from a normal pane. This requires the WezTerm fork's
+Cmd+S opens a centered picker in the tab's single floating pane, creating or
+showing it as needed. Each invocation resets the float to 60% of the tab's width
+and height. The existing float's process stays running beneath the picker.
+Escape returns to the original pane; opening a target dismisses the popup first.
+Set `programs.sysinit-wezterm.settings.picker.placement` to `"float"` (default),
+`"auto"`, `"pane"`, or `"window"`. Set `picker.float_size` to a fraction greater
+than zero and at most one to change the default popup size. Auto draws selectors
+inside a focused floating pane and uses the full window from a normal pane.
+This requires the WezTerm fork's
 `InputSelector.scope` support.
 
 ## Session recovery

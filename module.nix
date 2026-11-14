@@ -151,11 +151,12 @@ in
     assertions = [
       {
         assertion = builtins.elem (cfg.settings.picker.placement or "auto") [
+          "float"
           "auto"
           "pane"
           "window"
         ];
-        message = "WezTerm picker placement must be auto, pane, or window";
+        message = "WezTerm picker placement must be float, auto, pane, or window";
       }
       {
         assertion = builtins.all (
@@ -213,7 +214,7 @@ in
         };
         picker = {
           command = [ (lib.getExe runner) ];
-          placement = "auto";
+          placement = "float";
         };
       } cfg.settings
     );
