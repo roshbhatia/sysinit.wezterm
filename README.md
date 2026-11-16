@@ -111,9 +111,9 @@ Cached lists appear immediately; refreshes never replace an active selection or 
 Cold loads show a cancellable loading view. No provider discovery runs from status ticks.
 Opening a selected item still asks its provider for a current process plan.
 
-Control+B then `v` splits right, `s` splits down, and `t` opens a tab on the
-current host. Control+Shift+S/V and Command+Shift+T create local panes or tabs
-on macOS. Bare Control+S/V/T reaches the application.
+Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
+host. Add Shift to use the local host. These chords take priority over shell
+widgets and application bindings; locked mode passes them through.
 
 On the sysinit WezTerm fork, Cmd+F creates or toggles one floating pane owned
 by the current tab. Click outside or press Cmd+F to hide it; its process keeps
@@ -210,37 +210,28 @@ The Home Manager module handles installation; Lua modules handle behavior; provi
 
 ## Keyboard policy and platform audit
 
-Option belongs to the window manager. Command provides desktop terminal actions;
-Command+F toggles the tab's single floating pane. Control+B is the terminal
-management prefix. Follow it with Space for the command palette, `s`/`v` to
-split, `t` for a tab, `m` to zoom, `n` to rotate panes, `w` to close or detach,
-`f` for quick selection, `/` to search, `u`/`d` to scroll, or `g` to toggle
-application passthrough. Control+B twice sends a literal Control+B.
-
-The corresponding bare Control letters reach applications. Existing
-Control+H/J/K/L navigation retains its editor passthrough. Direct
-Control+Shift+W and Command+Shift+W request WezTerm's close confirmation;
-choosing Close in the close/detach selector already confirms that action. A native client
-running inside desktop WezTerm needs two outer Control+B presses to receive one
-Control+B, since the desktop consumes the first prefix.
-Control+B then `g` toggles locked mode, in which main-map shortcuts pass their
-original key to the application. The same prefixed chord remains available to
-unlock. Editor and TUI navigation passthrough rules remain in place.
+Control+S/V split, Control+T opens a tab, Control+M zooms, Control+N rotates,
+and Control+W opens close/detach directly, including inside Codex. No prefix is
+required. Ctrl+G toggles locked mode, in which
+main-map shortcuts pass their original key to the application. Ctrl+G itself
+remains available to unlock. Editor and TUI passthrough rules remain in place.
 Copy/search modes retain their native modal controls; Escape exits them.
+Direct Control+Shift+W and Command+Shift+W request close confirmation.
 Alt is reserved for the i3-style window manager; the default, copy-mode, and
 search-mode tables define no Alt shortcuts. Inherited copy-mode Alt aliases
-are removed; Vim word navigation and search-mode exit keys are retained.
+are removed; Vim word navigation and search-mode exit keys are retained. Terminal shortcuts remain custom where the Ctrl workflow takes
+priority over upstream defaults.
 
 | Operation | macOS | Linux |
 | --- | --- | --- |
 | Copy / paste | Cmd+C / Cmd+V | Ctrl+Shift+C / Ctrl+Shift+V |
-| New tab on current host | Cmd+T, Ctrl+B then t | Ctrl+Shift+T, Ctrl+B then t |
+| New tab on current host | Cmd+T, Ctrl+T | Ctrl+Shift+T, Ctrl+T |
 | New local tab | Cmd+Shift+T, Ctrl+Shift+T | Super+Shift+T |
 | New window / local window | Cmd+N / Cmd+Shift+N | Ctrl+Shift+N / Super+Shift+N |
-| Find scrollback | Cmd+/, Ctrl+B then / | Ctrl+Shift+F, Ctrl+B then / |
+| Find scrollback | Cmd+/, Ctrl+/ | Ctrl+Shift+F, Ctrl+/ |
 | Reload configuration | Cmd+R | Ctrl+Shift+R |
 | Rename tab | Cmd+Shift+R, Ctrl+Shift+R | Super+Shift+R |
-| Command palette | Cmd+Shift+P, Cmd+;, Ctrl+B then Space | Ctrl+Shift+P, Ctrl+B then Space |
+| Command palette | Cmd+Shift+P, Cmd+; | Ctrl+Shift+P, Ctrl+; |
 | Copy mode | Ctrl+Shift+X, Ctrl+Escape | Ctrl+Shift+X, Ctrl+Escape |
 | Pane selector | Cmd+Ctrl+P, Ctrl+Shift+F | Super+Ctrl+P |
 | Select tab 1–9 | Cmd+1–9, Ctrl+1–9 | Ctrl+Shift+1–9; Ctrl/Super+1–9 aliases |
