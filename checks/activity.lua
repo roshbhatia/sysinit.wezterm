@@ -166,6 +166,9 @@ local window = {
   end,
 }
 package.loaded["session_tree.sessions"] = {
+  slots = function()
+    return { build = 1 }
+  end,
   last_active = function()
     return 0
   end,
