@@ -524,6 +524,13 @@ function M.fork(source, target)
   if not selected then
     return false
   end
+  for _, window in ipairs(selected.window_states) do
+    for _, tab in ipairs(window.tabs) do
+      pane_tree.fold(tab.pane_tree, nil, function(_, node)
+        node.resume, node.thread_id = nil, nil
+      end)
+    end
+  end
   return restore_state({ version = 1, active = target, workspaces = { selected } }, target, true)
 end
 

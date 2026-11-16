@@ -445,6 +445,11 @@ end
 assert(recovery.save())
 local plain = read_snapshot().workspaces[1].window_states[1].tabs[1].pane_tree
 assert(not plain.resume, "a shell with stale agent metadata was marked for resume")
+package.loaded["sysinit.pkg.ui.panes"].facts = function()
+  return { agent = "claude", thread_id = "root-thread" }
+end
+assert(recovery.fork("single", "copy"))
+assert(not windows[#windows].selected.selected.spawn_args, "forking a workspace relaunched its conversation")
 recovery_opts.scrollback_lines, recovery_opts.agent_resume = 0, nil
 windows, attached = {}, false
 local marker = assert(io.open(state_dir .. "/passed", "w"))
