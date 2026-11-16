@@ -1,0 +1,21 @@
+checks/activity.lua
+  s_796b0b41a96769::t_4778270c593523 169-171
+flake.lock
+  s_796b0b41a96769::t_bae3965d52c64f 34-35,38
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "3d9c9241fedb059a001e69964eea75a65df8c7cb",
+  "prompts": {},
+  "sessions": {
+    "s_796b0b41a96769": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1e530-4adf-7a10-879b-2ed1876f1c1f",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
