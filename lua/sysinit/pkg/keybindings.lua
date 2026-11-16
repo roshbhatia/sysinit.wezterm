@@ -71,6 +71,19 @@ local TUI_SCROLL = (function()
 end)()
 
 local COMMON_MODS = { "CTRL", "SUPER" }
+local PREFIX_ACTIONS = {
+  s = true,
+  v = true,
+  m = true,
+  n = true,
+  w = true,
+  t = true,
+  f = true,
+  u = true,
+  d = true,
+  ["/"] = true,
+  [";"] = true,
+}
 
 local smart_keys = require("smart_keys_plugin")
 smart_keys.apply_to_config({}, {
@@ -81,18 +94,15 @@ smart_keys.apply_to_config({}, {
   app_user_var = "SYSINIT_APP",
 })
 local function create_smart_keybind(key, mods, action, opts)
+  local prefixed = mods == "CTRL" and PREFIX_ACTIONS[key]
+  if prefixed then
+    opts = nil
+  end
   local binding = smart_keys.binding(key, mods, action, opts)
-  if mods == "CTRL" and (key == "w" or key == "u") then
-    local fallback = binding.action
-    binding.action = wezterm.action_callback(function(window, pane)
-      local displayed = window:active_pane()
-      local active = window:mux_window():active_pane()
-      if displayed and active and displayed:pane_id() ~= active:pane_id() then
-        window:perform_action(act.SendKey({ key = key, mods = mods }), displayed)
-      else
-        window:perform_action(fallback, pane)
-      end
-    end)
+  if prefixed then
+    -- Locked mode still forwards the original Control chord.
+    binding.mods = "LEADER"
+    return binding
   end
   return binding
 end
@@ -142,8 +152,6 @@ local function get_pane_keys()
     create_smart_keybind("v", "CTRL", host_action("Right", false)),
     create_smart_keybind("s", "CTRL|SHIFT", host_action("Down", true)),
     create_smart_keybind("v", IS_LINUX and "SUPER|SHIFT" or "CTRL|SHIFT", host_action("Right", true)),
-    -- CTRL-m is a carriage return, but nothing types it instead of Enter, and a
-    -- passthrough would cost pane zoom inside an editor. Left bound on purpose.
     create_smart_keybind("m", "CTRL", act.TogglePaneZoomState),
     create_smart_keybind("n", "CTRL", act.RotatePanes("Clockwise"), { passthrough = TRACE_KEYS }),
   }
@@ -183,7 +191,7 @@ local function get_pane_keys()
 
   for _, mods in ipairs(COMMON_MODS) do
     table.insert(keys, create_smart_keybind("w", mods, close_or_detach))
-    table.insert(keys, create_smart_keybind("w", mods .. "|SHIFT", act.CloseCurrentPane({ confirm = false })))
+    table.insert(keys, create_smart_keybind("w", mods .. "|SHIFT", act.CloseCurrentPane({ confirm = true })))
   end
 
   return keys
@@ -380,7 +388,6 @@ end
 local function get_search_keys()
   return {
     create_smart_keybind("Escape", "CTRL", act.ActivateCopyMode),
-    -- CTRL-/ is readline undo and CTRL-f is page-forward in an editor.
     create_smart_keybind("/", "CTRL", act.Search("CurrentSelectionOrEmptyString"), {
       passthrough = EDITORS,
     }),
@@ -392,9 +399,6 @@ end
 
 local function get_scroll_keys()
   return {
-    -- CTRL-u is kill-line and CTRL-d is EOF, and a shell prompt needs both far
-    -- more than it needs a half-page scroll. SUPER-u and SUPER-d keep the scroll
-    -- reachable from the prompt, so the passthrough costs nothing.
     create_smart_keybind("u", "CTRL", { ScrollByLine = -40 }, { passthrough = TUI_SCROLL }),
     create_smart_keybind("d", "CTRL", { ScrollByLine = 40 }, { passthrough = TUI_SCROLL }),
     create_smart_keybind("u", "SUPER", { ScrollByLine = -40 }),
@@ -418,6 +422,7 @@ end
 
 function M.setup(config)
   config.disable_default_key_bindings = true
+  config.leader = { key = "b", mods = "CTRL", timeout_milliseconds = 1000 }
 
   local keys = merge_keys(
     get_system_keys(),
@@ -449,15 +454,15 @@ function M.setup(config)
   table.insert(keys, create_smart_keybind("0", "CTRL", act.ResetFontSize))
   table.insert(keys, create_smart_keybind("0", "SUPER", act.ResetFontSize))
 
-  -- CTRL-g is readline's abort, and it stays bound: it is the switch that turns
-  -- every other binding into a passthrough, so it cannot itself pass through.
   table.insert(keys, {
     key = "g",
-    mods = "CTRL",
+    mods = "LEADER",
     action = wezterm.action_callback(function()
       M.locked_mode = not M.locked_mode
     end),
   })
+  table.insert(keys, { key = "b", mods = "LEADER|CTRL", action = act.SendKey({ key = "b", mods = "CTRL" }) })
+  table.insert(keys, { key = "Space", mods = "LEADER", action = act.ActivateCommandPalette })
 
   config.ssh_domains = require("sysinit.pkg.domains").ssh()
 

@@ -371,82 +371,42 @@ window.mux_window = function()
   }
 end
 
+assert(key_config.leader.key == "b" and key_config.leader.mods == "CTRL", "terminal prefix is inconsistent")
+for _, key in ipairs({ "s", "v", "m", "n", "w", "t", "f", "u", "d", "/", ";", "g" }) do
+  assert(not seen["CTRL+" .. key], "terminal management consumes application input: " .. key)
+end
+assert(key_binding("b", "LEADER|CTRL").action.SendKey.mods == "CTRL", "double prefix cannot reach an application")
+assert(
+  key_binding("Space", "LEADER").action == action.ActivateCommandPalette,
+  "prefix has no discoverable command menu"
+)
 key_binding("h", "CTRL").action(window, pane)
-assert(performed[1].SendKey.key == "h", "CTRL-h did not pass through to Neovim")
-key_binding("v", "CTRL").action(window, pane)
-assert(performed[2].SplitPane.command.domain == "CurrentPaneDomain", "CTRL-v did not split from Neovim")
+assert(performed[#performed].SendKey.key == "h", "CTRL-h did not pass through to Neovim")
+key_binding("v", "LEADER").action(window, pane)
+assert(performed[#performed].SplitPane.command.domain == "CurrentPaneDomain", "prefixed split changed host")
 key_binding("s", "CTRL|SHIFT").action(window, pane)
-assert(performed[3].SplitPane.direction == "Down", "CTRL-SHIFT-s did not create a top-level down split")
+assert(performed[#performed].SplitPane.direction == "Down", "top-level down split changed")
 key_binding("v", "CTRL|SHIFT").action(window, pane)
-assert(performed[4].SplitPane.direction == "Right", "CTRL-SHIFT-v did not create a top-level right split")
+assert(performed[#performed].SplitPane.direction == "Right", "top-level right split changed")
 pane_vars = {}
-current_process = "slk"
-for _, chord in ipairs({
-  { "s", "CTRL" },
-  { "v", "CTRL" },
-  { "f", "CTRL" },
-  { "t", "CTRL" },
-  { "u", "CTRL" },
-  { "d", "CTRL" },
-}) do
-  local before = #performed
-  key_binding(chord[1], chord[2]).action(window, pane)
-  if chord[1] == "s" or chord[1] == "v" or chord[1] == "t" then
-    assert(not performed[before + 1].SendKey, "host creation chord was passed through")
-  else
-    assert(performed[before + 1].SendKey.key == chord[1], chord[2] .. "-" .. chord[1] .. " did not reach slk")
+for _, process in ipairs({ "zsh", "nu", "nvim", "slk", "traces", "orc", "diffnav", "unknown-tui" }) do
+  current_process = process
+  for _, key in ipairs({ "s", "v", "f", "t", "u", "d", "w", "n" }) do
+    local before = #performed
+    key_binding(key, "LEADER").action(window, pane)
+    assert(
+      #performed == before + 1 and not performed[#performed].SendKey,
+      "explicit terminal prefix was passed to " .. process
+    )
   end
 end
 current_process = "zsh"
 key_binding("h", "CTRL").action(window, pane)
-assert(performed[11].ActivatePaneDirection == "Left", "CTRL-h did not move from a shell pane")
--- nu is the pane shell now, so a shell list that forgot it would send every
--- readline chord to wezterm instead of to the prompt.
-current_process = "nu"
-key_binding("u", "CTRL").action(window, pane)
-assert(performed[12].SendKey.key == "u", "CTRL-u did not pass through to a nushell pane")
-performed[12] = nil
+assert(performed[#performed].ActivatePaneDirection == "Left", "existing shell navigation changed")
 keybindings.locked_mode = true
 key_binding("h", "CTRL").action(window, pane)
-assert(performed[12].SendKey.mods == "CTRL", "locked mode consumed CTRL-h")
+assert(performed[#performed].SendKey.mods == "CTRL", "locked mode consumed navigation")
 keybindings.locked_mode = false
-
-current_process = "traces"
-key_binding("f", "CTRL").action(window, pane)
-assert(performed[13].SendKey.key == "f", "CTRL-f did not reach Traces")
-key_binding("w", "CTRL").action(window, pane)
-assert(performed[14].InputSelector, "CTRL-w did not open the close choice from Traces")
-current_process = "orc"
-key_binding("f", "CTRL").action(window, pane)
-assert(performed[15].SendKey.key == "f", "CTRL-f did not reach Orc")
-key_binding("w", "CTRL").action(window, pane)
-assert(performed[16].InputSelector, "CTRL-w did not open the close choice from Orc")
-current_process = "slk"
-for _, key in ipairs({ "n", "w" }) do
-  local before = #performed
-  key_binding(key, "CTRL").action(window, pane)
-  if key == "w" then
-    assert(performed[before + 1].InputSelector, "CTRL-w did not open the close choice from slk")
-  else
-    assert(performed[before + 1].SendKey.key == key, "CTRL-" .. key .. " did not reach slk")
-  end
-end
-current_process = "traces"
-local before = #performed
-key_binding("n", "CTRL").action(window, pane)
-assert(performed[before + 1].SendKey.key == "n", "CTRL-n did not reach the Traces command picker")
-
-current_process = "diffnav"
-for _, key in ipairs({ "f", "u", "d" }) do
-  local before = #performed
-  key_binding(key, "CTRL").action(window, pane)
-  assert(performed[before + 1].SendKey.key == key, "reader chord did not reach diffnav")
-end
-for _, key in ipairs({ "s", "v", "t" }) do
-  local before = #performed
-  key_binding(key, "CTRL").action(window, pane)
-  assert(not performed[before + 1].SendKey, "reader changed same-host terminal bindings")
-end
 
 current_process = "ssh"
 pane_vars = { SYSINIT_APP = "traces" }
@@ -464,28 +424,7 @@ assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app 
 
 pane_vars = {}
 current_process = "python3"
-displayed_pane = {
-  pane_id = function()
-    return 99
-  end,
-}
-for _, key in ipairs({ "w", "u" }) do
-  local before = #performed
-  key_binding(key, "CTRL").action(window, pane)
-  assert(performed[before + 1].SendKey, "overlay filter editing invoked a terminal action")
-  assert(performed[before + 1].SendKey.key == key and performed[before + 1].SendKey.mods == "CTRL")
-  assert(performed_targets[before + 1] == displayed_pane, "filter edit was sent to the covered terminal")
-end
-local before_super_close = #performed
-key_binding("w", "SUPER").action(window, pane)
-assert(performed[before_super_close + 1].InputSelector, "SUPER-w did not offer close or detach")
-displayed_pane = pane
-local before_terminal = #performed
-key_binding("w", "CTRL").action(window, pane)
-key_binding("u", "CTRL").action(window, pane)
-assert(performed[before_terminal + 1].InputSelector, "CTRL-w did not offer close or detach")
-assert(performed[before_terminal + 2].ScrollByLine == -40, "ordinary terminal scrolling changed")
-for _, mods in ipairs({ "CTRL", "SUPER" }) do
+for _, mods in ipairs({ "LEADER", "SUPER" }) do
   key_binding("w", mods).action(window, pane)
   local close_choice = assert(performed[#performed].InputSelector)
   assert(close_choice.choices[1].id == "close" and close_choice.choices[2].id == "detach")
@@ -496,8 +435,10 @@ for _, mods in ipairs({ "CTRL", "SUPER" }) do
   assert(performed[#performed].CloseCurrentPane.confirm == false, "close asked for confirmation twice")
   close_choice.action(window, pane, "detach")
   assert(performed[#performed].DetachDomain == "CurrentPaneDomain", "detach targeted another domain")
-  key_binding("w", mods .. "|SHIFT").action(window, pane)
-  assert(performed[#performed].CloseCurrentPane.confirm == false, "shift-close asked for confirmation")
+end
+for _, mods in ipairs({ "CTRL|SHIFT", "SUPER|SHIFT" }) do
+  key_binding("w", mods).action(window, pane)
+  assert(performed[#performed].CloseCurrentPane.confirm == true, "direct close bypassed confirmation")
 end
 
 require("session_tree.options").configure({
@@ -1584,7 +1525,7 @@ for _, binding in ipairs(linux_config.keys) do
     "Linux additional float shortcut remains enabled"
   )
 end
-linux_binding("g", "CTRL").action(linux_window, {})
+linux_binding("g", "LEADER").action(linux_window, {})
 for _, chord in ipairs({
   { "f", "SUPER" },
   { "v", "CTRL|SHIFT" },
@@ -1597,5 +1538,5 @@ for _, chord in ipairs({
     "locked mode executes a terminal action"
   )
 end
-linux_binding("g", "CTRL").action(linux_window, {})
+linux_binding("g", "LEADER").action(linux_window, {})
 assert(not linux_keys.locked_mode, "locked mode cannot be exited")
