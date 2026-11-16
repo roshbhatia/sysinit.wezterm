@@ -33,8 +33,15 @@ to surviving processes. When the mux has restarted, recovery rebuilds the saved
 workspaces, windows, split layouts, directories, active workspace, and tab-local
 floating panes. Explicit launch commands open their requested context.
 
-Snapshots contain layout metadata, not terminal output or commands to replay.
-Applications need their own resume support after the host running them reboots.
+Agent panes save their conversation ID and resume that conversation after a mux
+restart. `settings.agentResume` maps harness names to resume command prefixes;
+the saved ID is passed as the final argument. Recovery starts that command as
+the pane process, then opens the configured shell when it exits. A failed
+resume prints its exit status. Snapshots without a conversation ID open a shell
+with an explanation rather than selecting a different recent conversation.
+Shell panes can retain recent output through `persistence.scrollback_lines`.
+History copies omit that output. Reattaching to a surviving mux retains its
+processes and does not run recovery commands.
 The snapshot is saved on focus changes and every 60 seconds, with an atomic write
 and a previous-snapshot backup. Unreachable remote workspaces remain in the saved
 session for a later restore. Existing workspace-manager snapshots remain intact.

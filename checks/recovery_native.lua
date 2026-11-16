@@ -74,6 +74,7 @@ local function make_pane(domain, cwd, tab)
   end
   function pane:split(args)
     local child = make_pane(args.domain and args.domain.DomainName or self.domain, args.cwd, self.tab_ref)
+    child.spawn_args = args.args
     self.tab_ref.positions[#self.tab_ref.positions + 1] = { left = 41, top = 0, width = 39, height = 24, pane = child }
     return child
   end
@@ -180,6 +181,7 @@ local function make_window(workspace, domain, cwd)
   end
   function window:spawn_tab(args)
     local tab = make_tab(self, args.domain.DomainName, args.cwd)
+    tab.selected.spawn_args = args.args
     self.tab_list[#self.tab_list + 1] = tab
     self.selected = tab
     return tab, tab.selected
@@ -225,6 +227,7 @@ fake.mux = {
   spawn_window = function(args)
     operations[#operations + 1] = "spawn " .. args.domain.DomainName
     local window = make_window(args.workspace, args.domain.DomainName, args.cwd)
+    window.selected.selected.spawn_args = args.args
     windows[#windows + 1] = window
     return window.selected, window.selected.selected, window
   end,
@@ -354,7 +357,11 @@ pending[1][2]()
 assert(#timers == 1, "the reloaded save timer did not keep running")
 package.loaded["sysinit.pkg.recovery"] = recovery
 recovery_opts.scrollback_lines = 50
-recovery_opts.agent_resume = { claude = { "claude", "--continue" } }
+recovery_opts.agent_resume = { claude = { "/bin/sh", state_dir .. "/agent" } }
+recovery_opts.shell = { "/bin/sh", "-c", "printf SHELL" }
+local agent_script = assert(io.open(state_dir .. "/agent", "w"))
+agent_script:write('printf "AGENT:%s\\n" "$1"; exit 7\n')
+agent_script:close()
 windows = { make_window("gamma", "local", "/fixture") }
 local shell_pane = windows[1].selected.selected
 local agent_pane = shell_pane:split({ cwd = "/fixture" })
@@ -366,7 +373,7 @@ shell_pane.get_lines_as_text = function()
 end
 package.loaded["sysinit.pkg.ui.panes"] = {
   facts = function(id)
-    return { agent = id == agent_pane.id and "claude" or nil }
+    return { agent = id == agent_pane.id and "claude" or nil, thread_id = "saved conversation's ID" }
   end,
 }
 assert(recovery.save(), table.concat(operations, "\n"))
@@ -392,18 +399,52 @@ for _, node in ipairs(annotated) do
 end
 assert(scrollback_node and scrollback_node.scrollback == "old output", "scrollback was not captured")
 assert(resume_node and resume_node.resume == "claude" and not resume_node.scrollback, "the agent pane was not marked")
+assert(resume_node.thread_id == "saved conversation's ID", "the saved conversation ID was dropped")
 local newest = assert(io.open(recovery.history()[1].path))
 assert(not newest:read("*a"):find("old output", 1, true), "snapshot history kept scrollback")
 newest:close()
 windows, attached = {}, false
 assert(recovery.restore("gamma"), table.concat(operations, "\n"))
-local replayed, typed = false, false
+local replayed, resumed = false, false
 for _, position in ipairs(windows[1].selected.positions) do
   replayed = replayed or (position.pane.injected or ""):find("old output", 1, true) ~= nil
-  typed = typed or position.pane.sent == "claude --continue"
+  assert(not position.pane.sent, "recovery typed into the starting shell")
+  if position.pane.spawn_args then
+    local ok, stdout, stderr = native.run_child_process(position.pane.spawn_args)
+    assert(ok and stdout == "AGENT:saved conversation's ID\nSHELL", stdout .. stderr)
+    assert(stderr:find("Session recovery exited with status 7", 1, true), "resume failure was hidden")
+    resumed = true
+  end
 end
 assert(replayed, "the restored shell did not replay its scrollback")
-assert(typed, "the agent resume command was not typed without Enter")
+assert(resumed, "the saved conversation was not launched")
+
+windows = { make_window("single", "local", "/fixture") }
+package.loaded["sysinit.pkg.ui.panes"].facts = function()
+  return { agent = "claude", thread_id = "root-thread" }
+end
+assert(recovery.save())
+windows, attached = {}, false
+assert(recovery.restore("single"))
+local launched = assert(windows[1].selected.selected.spawn_args, "the root agent pane has no launch command")
+local ok, stdout = native.run_child_process(launched)
+assert(ok and stdout == "AGENT:root-thread\nSHELL", stdout)
+
+package.loaded["sysinit.pkg.ui.panes"].facts = function()
+  return { agent = "claude" }
+end
+assert(recovery.save())
+windows, attached = {}, false
+assert(recovery.restore("single"))
+ok, stdout = native.run_child_process(assert(windows[1].selected.selected.spawn_args))
+assert(ok and stdout:find("no saved conversation ID", 1, true) and not stdout:find("AGENT:", 1, true), stdout)
+
+package.loaded["sysinit.pkg.ui.panes"].facts = function()
+  return { agent = "claude", process_observable = true }
+end
+assert(recovery.save())
+local plain = read_snapshot().workspaces[1].window_states[1].tabs[1].pane_tree
+assert(not plain.resume, "a shell with stale agent metadata was marked for resume")
 recovery_opts.scrollback_lines, recovery_opts.agent_resume = 0, nil
 windows, attached = {}, false
 local marker = assert(io.open(state_dir .. "/passed", "w"))

@@ -209,6 +209,8 @@ in
           mux_config = muxConfigPath;
           scrollback_lines = 0;
           agent_resume = cfg.settings.agentResume or { };
+          shell = cfg.settings.shell or [ (lib.getExe pkgs.zsh) ];
+          posix_shell = cfg.settings.posixShell or (lib.getExe pkgs.zsh);
           mux_binary = cfg.persistence.muxBinary;
           interval = 60;
         };

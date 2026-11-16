@@ -24,9 +24,13 @@ local function annotate_tree(node, panes)
     local ok, facts = pcall(function()
       return require("sysinit.pkg.ui.panes").facts(pane:pane_id(), cwd)
     end)
-    local agent = ok and facts and facts.agent
+    local agent = ok and facts and (facts.live_agent or facts.agent)
+    if ok and facts and facts.process_observable and not facts.live_agent then
+      agent = nil
+    end
     if agent and (settings.agent_resume or {})[agent] then
       node.resume = agent
+      node.thread_id = facts.thread_id
     elseif (settings.scrollback_lines or 0) > 0 then
       local alt_ok, alt = pcall(function()
         return pane:is_alt_screen_active()
@@ -60,7 +64,6 @@ end
 
 -- The mux injects saved text into its own panes; a GUI-side restore holds mux-client
 -- panes, where inject_output is a no-op, so the restored shell prints the text itself.
--- Resume commands are typed, not run, so nothing starts unreviewed.
 local function restore_pane(node)
   local pane = node.pane
   if not pane then
@@ -74,10 +77,35 @@ local function restore_pane(node)
       pane:send_text(" /bin/cat '" .. path .. "'; /bin/rm -f '" .. path .. "'\r")
     end
   end
+end
+
+local function resume_args(node)
   local command = node.resume and (settings.agent_resume or {})[node.resume]
-  if type(command) == "table" and #command > 0 then
-    pane:send_text(wezterm.shell_join_args(command))
+  if type(command) ~= "table" or #command == 0 then
+    return nil
   end
+  local script
+  if node.thread_id then
+    local argv = {}
+    for _, arg in ipairs(command) do
+      argv[#argv + 1] = arg
+    end
+    argv[#argv + 1] = node.thread_id
+    script = wezterm.shell_join_args(argv)
+      .. '; status=$?; if [ "$status" -ne 0 ]; then printf "Session recovery exited with status %s\\n" "$status" >&2; fi; '
+  else
+    script = "printf '%s\\n' "
+      .. wezterm.shell_join_args({
+        "Session recovery has no saved conversation ID. Choose a conversation with: "
+          .. wezterm.shell_join_args(command),
+      })
+      .. "; "
+  end
+  return {
+    settings.posix_shell or "/bin/sh",
+    "-c",
+    script .. "exec " .. wezterm.shell_join_args(settings.shell or { "/bin/sh" }),
+  }
 end
 
 local function local_domain(name)
@@ -264,6 +292,9 @@ local function valid_tree(node)
   if node.domain ~= nil and type(node.domain) ~= "string" then
     return false
   end
+  if node.thread_id ~= nil and (type(node.thread_id) ~= "string" or node.thread_id == "") then
+    return false
+  end
   return (node.right == nil or valid_tree(node.right)) and (node.bottom == nil or valid_tree(node.bottom))
 end
 
@@ -304,6 +335,7 @@ read_session = function(path)
 end
 
 local function prepare_tree(node, unavailable)
+  node.args = resume_args(node)
   node.domain = domain_name(node.domain)
   if unavailable[node.domain] then
     return false
@@ -422,13 +454,14 @@ local function restore_state(state, selected_workspace, fresh)
               if (fresh or not retained[name]) and prepare_tree(root, unavailable) then
                 local tab, pane
                 if window then
-                  tab, pane = window:spawn_tab({ cwd = root.cwd, domain = { DomainName = name } })
+                  tab, pane = window:spawn_tab({ cwd = root.cwd, domain = { DomainName = name }, args = root.args })
                 else
                   tab, pane, window = wezterm.mux.spawn_window({
                     workspace = workspace.workspace,
                     width = saved_window.size and saved_window.size.cols,
                     height = saved_window.size and saved_window.size.rows,
                     cwd = root.cwd,
+                    args = root.args,
                     domain = { DomainName = name },
                   })
                   window:set_title(saved_window.title or "")

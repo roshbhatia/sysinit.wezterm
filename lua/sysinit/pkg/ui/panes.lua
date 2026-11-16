@@ -66,6 +66,7 @@ function M.read_pane_record(pane_id)
 
   return {
     session = type(data.session) == "string" and data.session or "",
+    thread_id = type(data.thread_id) == "string" and data.thread_id or nil,
     repo = type(data.repo) == "string" and data.repo or "",
     branch = type(data.branch) == "string" and data.branch ~= "" and data.branch or nil,
     dirty = data.dirty == true,
@@ -163,20 +164,27 @@ end
 function M.facts(pane_id, cwd, now)
   now = now or os.time()
   local program_status, _, _, program_app
+  local live_agent, observable
   if pane_id then
     pcall(function()
       local object = wezterm.mux.get_pane(pane_id)
       if object then
         program_status, _, _, program_app = M.program_state(object)
+        live_agent, _, observable = activity.process(object, agents)
       end
     end)
   end
   local record = M.record_for(pane_id, cwd, now)
   local latest = M.latest(pane_id)
   local facts = {
+    live_agent = live_agent,
+    process_observable = observable,
     agent = M.canonical_agent(program_app or M.latest_agent(pane_id) or (record and record.agent) or nil),
     status = program_status or (latest ~= "unknown" and latest) or (record and record.status) or nil,
   }
+  if record and M.canonical_agent(record.agent) == (live_agent or facts.agent) then
+    facts.thread_id = record.thread_id
+  end
   if record and record.repo ~= "" and record.branch then
     facts.repo, facts.branch = record.repo, record.branch
   else
