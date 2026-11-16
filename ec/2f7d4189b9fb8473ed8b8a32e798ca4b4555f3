@@ -1,0 +1,21 @@
+checks/recovery_native.lua
+  s_7028fc5da01072::t_dcf527d34dd2e8 448-452
+lua/sysinit/pkg/recovery.lua
+  s_7028fc5da01072::t_dcf527d34dd2e8 527-533
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "ec2f7d4189b9fb8473ed8b8a32e798ca4b4555f3",
+  "prompts": {},
+  "sessions": {
+    "s_7028fc5da01072": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1d0ac-4380-7023-8b2f-a382ea7a16c4",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
