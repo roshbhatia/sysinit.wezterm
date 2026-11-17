@@ -1,0 +1,31 @@
+README.md
+  s_dfcfe20c6e3594::t_1ac31331a48c9a 60-71
+module.nix
+  s_d2d448cefaa2bf::t_34d3aaca3beb7e 45-47,53-54
+scripts/remote-client.nu
+  s_d2d448cefaa2bf::t_b5841023b1e391 1-11
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc09c449005ae34dd47b0d4fb2a582f32347914a",
+  "prompts": {},
+  "sessions": {
+    "s_d2d448cefaa2bf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eb81-5b2b-78b2-84fd-673be95ed315",
+        "model": "unknown"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    },
+    "s_dfcfe20c6e3594": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1ea52-5930-7a71-9fa2-501aefed6886",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
