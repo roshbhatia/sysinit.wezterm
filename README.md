@@ -210,10 +210,13 @@ The Home Manager module handles installation; Lua modules handle behavior; provi
 
 ## Keyboard policy and platform audit
 
-The Ctrl pane workflow is intentional. Ctrl+G toggles locked mode, in which
+Control+S/V split, Control+T opens a tab, Control+M zooms, Control+N rotates,
+and Control+W opens close/detach directly, including inside Codex. No prefix is
+required. Ctrl+G toggles locked mode, in which
 main-map shortcuts pass their original key to the application. Ctrl+G itself
 remains available to unlock. Editor and TUI passthrough rules remain in place.
 Copy/search modes retain their native modal controls; Escape exits them.
+Direct Control+Shift+W and Command+Shift+W request close confirmation.
 Alt is reserved for the i3-style window manager; the default, copy-mode, and
 search-mode tables define no Alt shortcuts. Inherited copy-mode Alt aliases
 are removed; Vim word navigation and search-mode exit keys are retained. Terminal shortcuts remain custom where the Ctrl workflow takes

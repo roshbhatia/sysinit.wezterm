@@ -463,6 +463,24 @@ key_binding("h", "CTRL").action(window, pane)
 assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app captured shell navigation")
 
 pane_vars = {}
+for _, process in ipairs({ "codex", "claude", "nu" }) do
+  current_process = process
+  for _, key in ipairs({ "s", "v", "t", "m", "n", "w" }) do
+    local before = #performed
+    key_binding(key, "CTRL").action(window, pane)
+    assert(not performed[before + 1].SendKey, "unlocked terminal control reached " .. process .. ": " .. key)
+  end
+  key_binding("g", "CTRL").action(window, pane)
+  assert(keybindings.locked_mode, "Ctrl+G did not enter locked mode")
+  for _, key in ipairs({ "s", "v", "t", "m", "n", "w" }) do
+    local before = #performed
+    key_binding(key, "CTRL").action(window, pane)
+    assert(performed[before + 1].SendKey.key == key, "locked mode captured " .. process .. ": " .. key)
+    assert(performed[before + 1].SendKey.mods == "CTRL")
+  end
+  key_binding("g", "CTRL").action(window, pane)
+  assert(not keybindings.locked_mode, "Ctrl+G did not leave locked mode")
+end
 current_process = "python3"
 displayed_pane = {
   pane_id = function()
@@ -497,7 +515,7 @@ for _, mods in ipairs({ "CTRL", "SUPER" }) do
   close_choice.action(window, pane, "detach")
   assert(performed[#performed].DetachDomain == "CurrentPaneDomain", "detach targeted another domain")
   key_binding("w", mods .. "|SHIFT").action(window, pane)
-  assert(performed[#performed].CloseCurrentPane.confirm == false, "shift-close asked for confirmation")
+  assert(performed[#performed].CloseCurrentPane.confirm == true, "direct close bypassed confirmation")
 end
 
 require("session_tree.options").configure({

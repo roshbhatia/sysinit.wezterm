@@ -183,7 +183,7 @@ local function get_pane_keys()
 
   for _, mods in ipairs(COMMON_MODS) do
     table.insert(keys, create_smart_keybind("w", mods, close_or_detach))
-    table.insert(keys, create_smart_keybind("w", mods .. "|SHIFT", act.CloseCurrentPane({ confirm = false })))
+    table.insert(keys, create_smart_keybind("w", mods .. "|SHIFT", act.CloseCurrentPane({ confirm = true })))
   end
 
   return keys
