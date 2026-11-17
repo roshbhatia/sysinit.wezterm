@@ -57,6 +57,18 @@ at `wezterm-remote`, the generated wrapper for the headless configuration. Use t
 same WezTerm fork revision on clients and servers. Stop the service only when its
 running jobs can end.
 
+Remote attachment defaults to a CLI session list. `wezterm-remote attach NAME`
+attaches or creates a persistent named session; append `-- COMMAND ARGS` to
+choose the creation command. Control+B followed by `d` detaches. Named sessions
+follow the attaching terminal's size. `wezterm-remote ui` opens the optional
+picker, which preserves shared desktop pane sizes.
+
+Set `settings.remote_client.interface = "ui"` to make the picker the no-argument
+default; `"cli"` is the default. The headless mux and the optional UI use
+`settings.colors` and `settings.color_scheme`, sharing the core WezTerm theme.
+The rendering terminal owns its font. Native `cli` and `tui` arguments continue
+to pass through the wrapper.
+
 Recovery uses the Nix-pinned
 [StephenGemin/resurrect.wezterm](https://github.com/StephenGemin/resurrect.wezterm)
 serializer and split restoration, with adapters for whole sessions and floating

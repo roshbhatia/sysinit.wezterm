@@ -42,14 +42,16 @@ let
         builtins.toJSON (builtins.toJSON (cfg.settings.unsetEnvironmentVariables or [ ]))
       }),
       mux_server_spawn_initial_tab = false,
+      colors = data.colors,
+      color_scheme = data.color_scheme,
+      remote_client = data.remote_client or { interface = "cli" },
     }
   '';
   remoteClient = pkgs.writeShellApplication {
     name = "wezterm-remote";
     text = ''
-      mkdir -p ${lib.escapeShellArg "${config.home.homeDirectory}/.local/state/wezterm"}
-      export WEZTERM_UNIX_SOCKET=${lib.escapeShellArg socketPath}
-      exec ${pkgs.wezterm}/bin/wezterm --config-file ${muxConfig} "$@"
+      exec ${lib.getExe pkgs.nushell} --no-config-file ${./scripts/remote-client.nu} \
+        ${pkgs.wezterm}/bin/wezterm ${muxConfig} "$@"
     '';
   };
   luaSource = import ./lua-source.nix {
