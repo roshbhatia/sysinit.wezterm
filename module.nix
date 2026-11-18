@@ -44,14 +44,20 @@ let
       mux_server_spawn_initial_tab = false,
       colors = data.colors,
       color_scheme = data.color_scheme,
-      remote_client = data.remote_client or { interface = "cli" },
     }
+  '';
+  remoteConfig = pkgs.writeText "wezterm-remote.lua" ''
+    local config = dofile(${builtins.toJSON muxConfig})
+    local utils = require("sysinit.pkg.utils")
+    local data = utils.load_json_file(utils.get_config_path("config.json")) or {}
+    config.remote_client = data.remote_client or { interface = "cli" }
+    return config
   '';
   remoteClient = pkgs.writeShellApplication {
     name = "wezterm-remote";
     text = ''
       exec ${lib.getExe pkgs.nushell} --no-config-file ${./scripts/remote-client.nu} \
-        ${pkgs.wezterm}/bin/wezterm ${muxConfig} "$@"
+        ${pkgs.wezterm}/bin/wezterm ${remoteConfig} "$@"
     '';
   };
   luaSource = import ./lua-source.nix {
