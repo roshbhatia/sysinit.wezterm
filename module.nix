@@ -121,7 +121,10 @@ in
     );
     systemd.user.services = lib.optionalAttrs (cfg.persistence.service && pkgs.stdenv.isLinux) {
       wezterm-mux = {
-        Unit.Description = "Persistent WezTerm mux";
+        Unit = {
+          Description = "Persistent WezTerm mux";
+          X-RestartIfChanged = false;
+        };
         Service = {
           ExecStart = "${pkgs.wezterm}/bin/wezterm-mux-server --config-file ${muxConfig}";
           Restart = "on-failure";
