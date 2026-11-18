@@ -1,0 +1,22 @@
+lua/sysinit/pkg/ui/statusbar.lua
+  s_d2d448cefaa2bf::t_5cd1da82849cc7 17
+checks/wezterm.lua
+  s_d2d448cefaa2bf::t_a1dec1d9e908cc 965,969
+  s_d2d448cefaa2bf::t_c75fb1a8405bc4 952,956
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "0d6de76ea492fb70fd32f445365119c4a772b67d",
+  "prompts": {},
+  "sessions": {
+    "s_d2d448cefaa2bf": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1eb81-5b2b-78b2-84fd-673be95ed315",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
