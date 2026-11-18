@@ -14,7 +14,7 @@ function M.window_index(window)
     if candidate:get_workspace() == window:active_workspace() then
       index = index + 1
       if candidate:window_id() == window:window_id() then
-        return "[" .. tostring(index) .. "] "
+        return " [" .. tostring(index) .. "] "
       end
     end
   end

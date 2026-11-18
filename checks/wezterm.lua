@@ -949,11 +949,11 @@ local status_window = {
     return 12
   end,
 }
-assert(statusbar.window_index(status_window) == "[2] ")
+assert(statusbar.window_index(status_window) == " [2] ")
 status_window.window_id = function()
   return 4
 end
-assert(statusbar.window_index(status_window) == "[1] ")
+assert(statusbar.window_index(status_window) == " [1] ")
 table.insert(mux_windows, 1, {
   window_id = function()
     return 15
@@ -962,11 +962,11 @@ table.insert(mux_windows, 1, {
     return "default"
   end,
 })
-assert(statusbar.window_index(status_window) == "[1] ")
+assert(statusbar.window_index(status_window) == " [1] ")
 status_window.window_id = function()
   return 15
 end
-assert(statusbar.window_index(status_window) == "[3] ")
+assert(statusbar.window_index(status_window) == " [3] ")
 local chips = statusbar.session_chips(status_window, {}, { default = 1, review = 2 }, {
   idle = "gray",
   name = "white",
