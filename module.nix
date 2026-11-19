@@ -70,8 +70,9 @@ let
   };
   runner = pkgs.writeShellApplication {
     name = "wezterm-picker-call";
+    runtimeInputs = [ pkgs.coreutils ];
     text = ''
-      exec ${pkgs.python3}/bin/python3 ${session-tree}/scripts/picker-call.py "$@"
+      exec ${pkgs.nushell}/bin/nu --no-config-file ${session-tree}/scripts/picker-call.nu "$@"
     '';
   };
 in

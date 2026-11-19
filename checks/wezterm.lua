@@ -1,5 +1,6 @@
 local lua_root = assert(arg[1], "WezTerm Lua path is required")
 local plugin_fixture = assert(arg[2], "plugin fixture path is required")
+local cjson = require("cjson")
 
 local switcher_file = assert(io.open(lua_root .. "/session_tree/switcher.lua", "r"))
 local switcher_source = switcher_file:read("*a")
@@ -172,6 +173,7 @@ package.loaded["sysinit.pkg.utils"] = {
   end,
   load_json_file = function(path)
     return {
+      shell = { "nu" },
       plugins = {
         fixture = plugin_fixture,
         nested = plugin_fixture .. "/nested",
@@ -523,6 +525,7 @@ require("session_tree.options").configure({
   passthrough_procs = require("sysinit.pkg.utils").load_json_file("config.json").passthrough_procs,
   shell = require("sysinit.pkg.utils").load_json_file("config.json").shell,
   home = "/nonexistent",
+  workspace_state_dir = assert(os.getenv("HOME")),
   binding = { key = "s", mods = "SUPER" },
   adapters = {
     format = require("sysinit.pkg.ui.format"),
@@ -563,6 +566,9 @@ assert(
 
 local cached_catalog, delivered_catalog, deliver_callback
 package.loaded["session_tree.catalog"] = {
+  invalidate = function()
+    cached_catalog = nil
+  end,
   peek = function()
     return cached_catalog
   end,
@@ -766,11 +772,17 @@ local valid_catalog = {
   can_create = true,
 }
 child_process = function(args)
+  if args[1] == "mkdir" then
+    return true, "", ""
+  end
   argv[#argv + 1] = args
+  if args[3] == "picker.rename" or args[3] == "picker.delete" then
+    return true, '{"kind":"updated"}', ""
+  end
   return true, "plan", ""
 end
-json_parse = function()
-  return plan
+json_parse = function(raw)
+  return raw == "plan" and plan or cjson.decode(raw)
 end
 launcher.open(launch_window, pane, "$")
 assert(performed[#performed].InputSelector.title == "Loading seshy", "cold provider did not display immediately")
@@ -830,15 +842,46 @@ assert(prompt and prompt.description == "Name", "creation did not prompt for a n
 before = #argv
 prompt.action(launch_window, pane, nil)
 assert(#argv == before, "cancelled creation invoked the provider")
-wezterm.json_encode = function()
-  return '["nu"]'
-end
+wezterm.json_encode = cjson.encode
 prompt.action(launch_window, pane, "new session")
 assert(argv[#argv][3] == "picker.create" and argv[#argv][4] == "new session")
 assert(performed[#performed].SwitchToWorkspace.spawn.set_environment_variables.WEZTERM_PICKER_SHELL == '["nu"]')
 valid_catalog.can_create = false
 launcher.open(launch_window, pane, "$")
 assert(#performed[#performed].InputSelector.choices == 1, "unadvertised creation was offered")
+valid_catalog.can_rename, valid_catalog.can_delete = true, true
+for _, operation in ipairs({ "rename", "delete" }) do
+  cached_catalog = valid_catalog
+  launcher.open(launch_window, pane, "$")
+  local management = performed[#performed].InputSelector
+  local label = operation == "rename" and "Rename session…" or "Delete session…"
+  local entry
+  for _, choice in ipairs(management.choices) do
+    if choice.label == label then
+      entry = choice.id
+    end
+  end
+  assert(entry, "provider management action was not advertised")
+  management.action(launch_window, pane, entry)
+  performed[#performed].InputSelector.action(launch_window, pane, "review")
+  before = #argv
+  if operation == "rename" then
+    local rename_prompt = performed[#performed].PromptInputLine
+    rename_prompt.action(launch_window, pane, nil)
+    assert(#argv == before, "cancelled rename invoked the provider")
+    rename_prompt.action(launch_window, pane, "renamed session")
+    assert(argv[#argv][3] == "picker.rename")
+    local input = cjson.decode(argv[#argv][4])
+    assert(input.id == "review" and input.name == "renamed session", "rename lost its structured input")
+  else
+    local confirmation = performed[#performed].InputSelector
+    confirmation.action(launch_window, pane, "no")
+    assert(#argv == before, "declining deletion invoked the provider")
+    confirmation.action(launch_window, pane, "yes")
+    assert(argv[#argv][3] == "picker.delete" and argv[#argv][4] == "review")
+  end
+end
+valid_catalog.can_rename, valid_catalog.can_delete = nil, nil
 for _, malformed in ipairs({ false, { id = "x", segments = { false } }, { id = "x", segments = "bad" } }) do
   cached_catalog = { descriptor = valid_catalog.descriptor, listed = { items = { malformed } } }
   launcher.open(launch_window, pane, "$")
@@ -851,7 +894,16 @@ before = #argv
 launcher.open(launch_window, pane, "!")
 picker = performed[#performed].InputSelector
 assert(picker.title == "WezTerm sessions" and #argv == before, "native sessions invoked a provider")
-picker.action(launch_window, pane, picker.choices[#picker.choices].id)
+local function choose_creation()
+  for _, choice in ipairs(picker.choices) do
+    if choice.label == "New session" then
+      picker.action(launch_window, pane, choice.id)
+      return
+    end
+  end
+  error("native creation entry is missing")
+end
+choose_creation()
 prompt = performed[#performed].PromptInputLine
 prompt.action(launch_window, pane, "scratch shell")
 opened = performed[#performed].SwitchToWorkspace
@@ -861,9 +913,9 @@ assert(#argv == before, "native creation invoked a provider")
 mux_windows = { mux_window("default", 1), mux_window("scratch shell", 2), mux_window("review", 3) }
 launcher.open(launch_window, pane, "!")
 picker = performed[#performed].InputSelector
-assert(#picker.choices == 3, "native picker included a provider-owned workspace")
+assert(#picker.choices == 5, "native picker included a provider-owned workspace or omitted management")
 assert(picker.choices[1].id == "default" and picker.choices[2].id == "scratch shell")
-picker.action(launch_window, pane, picker.choices[#picker.choices].id)
+choose_creation()
 prompt = performed[#performed].PromptInputLine
 prompt.action(launch_window, pane, "review")
 assert(notices[#notices] == "Session already exists: review", "native creation reused another provider's workspace")

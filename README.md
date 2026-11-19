@@ -116,7 +116,10 @@ After `!` WezTerm, scope decreases: `@` Tether hosts, `#` Zmx sessions, `$` Sesh
 
 `!` lists the default workspace and native sessions created through this picker.
 Choose `New session` and enter a name to start the configured shell at home.
-These sessions create no directories or worktrees. Their lifetime follows the running WezTerm workspace.
+These sessions create no project directories or worktrees. Their registrations
+remain available after the last terminal closes. With recovery enabled, reopening
+also restores the last saved layout. Rename session and Delete session are exposed
+by the native provider; deletion closes its terminals and removes its saved state.
 
 Opening the tree refreshes provider catalogs in the background.
 Cached lists appear immediately; refreshes never replace an active selection or its filter.
@@ -174,6 +177,8 @@ A provider manifest declares an executable argument list and these actions:
 | `picker.list` | Ordered items with stable IDs and display segments |
 | `picker.open` | A process plan for the selected ID |
 | `picker.create` (optional) | A process plan for creating a named session |
+| `picker.rename` (optional) | An update result after renaming `input.id` to `input.name` |
+| `picker.delete` (optional) | An update result after deleting `input.id` |
 
 The runner writes one `provider/v1` request to standard input.
 It accepts correlated event frames followed by one result frame.
@@ -183,6 +188,10 @@ The manifest advertises creation by including `actions["picker.create"]`.
 The optional description field `create` supplies `label` and `prompt` strings.
 The picker sends `input.name` after name entry; cancellation sends no creation request.
 Providers without the action get no creation entry.
+Management entries likewise follow the manifest. Providers own their persistence
+and deletion rules; the picker displays `delete.prompt`, confirms deletion, and
+reports provider errors. Seshy sessions are already persistent and its adapter
+uses `sy rename` and checked `sy delete` for management.
 
 Creation returns the same spawn plan as opening. An interactive creator runs in the new terminal.
 `WEZTERM_PICKER_SHELL` contains the configured shell argument list as JSON.

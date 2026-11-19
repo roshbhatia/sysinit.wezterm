@@ -263,6 +263,12 @@ function M.save()
     local path = settings.state_dir .. "/session.json"
     local previous = read_session(path)
     if previous then
+      for _, workspace in ipairs(previous.workspaces) do
+        if not names[workspace.workspace] and not deferred[workspace.workspace] then
+          workspace.dormant = true
+          state.workspaces[#state.workspaces + 1] = workspace
+        end
+      end
       write_snapshot(path .. ".bak", previous)
     end
     write_snapshot(path, state)
@@ -379,6 +385,14 @@ local function restore_state(state, selected_workspace, fresh)
     end
     state.workspaces = selected
     state.active = selected_workspace
+  else
+    local active = {}
+    for _, workspace in ipairs(state.workspaces) do
+      if not workspace.dormant then
+        active[#active + 1] = workspace
+      end
+    end
+    state.workspaces = active
   end
   busy = true
   if type(selected_workspace) ~= "string" then
@@ -503,13 +517,53 @@ local function restore_state(state, selected_workspace, fresh)
   return ok
 end
 
-function M.restore(selected_workspace)
+function M.restore(selected_workspace, fresh)
   local path = settings.state_dir .. "/session.json"
   local state = read_session(path) or read_session(path .. ".bak")
   if not state then
     return false
   end
-  return restore_state(state, selected_workspace, false)
+  return restore_state(state, selected_workspace, fresh or false)
+end
+
+local function update_snapshots(update)
+  local path = settings.state_dir .. "/session.json"
+  local ok, err = pcall(function()
+    for _, target in ipairs({ path, path .. ".bak" }) do
+      local state = read_session(target)
+      if state then
+        update(state)
+        write_snapshot(target, state)
+      end
+    end
+  end)
+  if not ok then
+    report(err)
+  end
+  return ok
+end
+
+function M.rename(old, name)
+  local ok = update_snapshots(function(state)
+    for _, workspace in ipairs(state.workspaces) do
+      if workspace.workspace == old then
+        workspace.workspace = name
+      end
+    end
+    for _, key in ipairs({ "slots", "native_workspaces" }) do
+      if state[key] and state[key][old] ~= nil then
+        state[key][name], state[key][old] = state[key][old], nil
+      end
+    end
+    if state.active == old then
+      state.active = name
+    end
+  end)
+  if deferred[old] then
+    deferred[name], deferred[old] = deferred[old], nil
+    deferred[name].workspace = name
+  end
+  return ok
 end
 
 function M.fork(source, target)
@@ -535,23 +589,21 @@ function M.fork(source, target)
 end
 
 function M.forget(name)
-  local path = settings.state_dir .. "/session.json"
-  local state = read_session(path)
-  if not state then
-    return false
-  end
-  local kept = {}
-  for _, workspace in ipairs(state.workspaces) do
-    if workspace.workspace ~= name then
-      kept[#kept + 1] = workspace
+  local ok = update_snapshots(function(state)
+    local kept = {}
+    for _, workspace in ipairs(state.workspaces) do
+      if workspace.workspace ~= name then
+        kept[#kept + 1] = workspace
+      end
     end
-  end
-  state.workspaces = kept
+    state.workspaces = kept
+    for _, key in ipairs({ "slots", "native_workspaces" }) do
+      if state[key] then
+        state[key][name] = nil
+      end
+    end
+  end)
   deferred[name] = nil
-  local ok, err = pcall(write_snapshot, path, state)
-  if not ok then
-    report(err)
-  end
   return ok
 end
 

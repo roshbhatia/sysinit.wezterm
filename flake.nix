@@ -1,7 +1,7 @@
 {
   description = "WezTerm live tree and provider picker";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm";
+  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm/46df457104c3b678c57e6ac5a6ee4b50ef754344";
   inputs.session-tree.inputs.nixpkgs.follows = "nixpkgs";
   inputs.spawn.url = "github:roshbhatia/spawn.wezterm";
   inputs.spawn.inputs.nixpkgs.follows = "nixpkgs";
@@ -169,7 +169,7 @@
             pkgs.runCommand "wezterm-config-tests"
               {
                 nativeBuildInputs = [
-                  pkgs.lua5_4
+                  (pkgs.lua5_4.withPackages (ps: [ ps.cjson ]))
                   pkgs.python3
                   pkgs.uv
                 ];

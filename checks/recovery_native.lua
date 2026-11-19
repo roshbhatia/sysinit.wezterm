@@ -451,6 +451,40 @@ end
 assert(recovery.fork("single", "copy"))
 assert(not windows[#windows].selected.selected.spawn_args, "forking a workspace relaunched its conversation")
 recovery_opts.scrollback_lines, recovery_opts.agent_resume = 0, nil
+windows = { make_window("durable", "local", "/fixture") }
+assert(recovery.save())
+windows = { make_window("other", "local", "/fixture") }
+assert(recovery.save())
+local durable
+for _, workspace in ipairs(read_snapshot().workspaces) do
+  if workspace.workspace == "durable" then
+    durable = workspace
+  end
+end
+assert(durable and durable.dormant, "closing the last pane erased the saved workspace")
+windows, attached = {}, false
+assert(recovery.restore())
+for _, window in ipairs(windows) do
+  assert(window:get_workspace() ~= "durable", "startup reopened a deliberately closed workspace")
+end
+assert(recovery.restore("durable", true), table.concat(operations, "\n"))
+assert(windows[#windows]:get_workspace() == "durable", "a saved workspace could not reopen beside a live workspace")
+assert(recovery.rename("durable", "renamed-durable"))
+local renamed = false
+for _, workspace in ipairs(read_snapshot().workspaces) do
+  assert(workspace.workspace ~= "durable", "rename retained the old saved name")
+  renamed = renamed or workspace.workspace == "renamed-durable"
+end
+assert(renamed, "rename dropped the saved workspace")
+assert(recovery.forget("renamed-durable"))
+for _, suffix in ipairs({ "", ".bak" }) do
+  local file = assert(io.open(state_dir .. "/session.json" .. suffix))
+  local state = native.json_parse(file:read("*a"))
+  file:close()
+  for _, workspace in ipairs(state.workspaces) do
+    assert(workspace.workspace ~= "renamed-durable", "deletion left a restorable snapshot")
+  end
+end
 windows, attached = {}, false
 local marker = assert(io.open(state_dir .. "/passed", "w"))
 marker:write("passed")
