@@ -1,0 +1,37 @@
+flake.nix
+  s_a4a3eea4720821::t_9be87564d55254 172
+  s_a4a3eea4720821::t_20660cc4dbd4aa 4
+checks/wezterm.lua
+  s_a4a3eea4720821::t_83f5abfaa3fca1 569-571,779-781,852-884
+  s_a4a3eea4720821::t_b16803a6dbd099 176
+  s_a4a3eea4720821::t_9be87564d55254 3,528,775-777,784-785,845,897-906,916,918
+module.nix
+  s_a4a3eea4720821::t_fc7562e8460af4 75
+  s_a4a3eea4720821::t_0275b82d1f85ff 73
+lua/sysinit/pkg/recovery.lua
+  s_a4a3eea4720821::t_9f5060d7b54496 266-271,388-395,520,526-528,530,538,542,552,562-566
+  s_a4a3eea4720821::t_bf3ddc6ad1ac8e 529,531-537,539-541,543-551,553-561,592-597,599-605
+README.md
+  s_a4a3eea4720821::t_4321581ebb2be8 119-122,180-181,191-194
+checks/recovery_native.lua
+  s_a4a3eea4720821::t_cce128d542df84 454-464,470-478
+  s_a4a3eea4720821::t_78ea9d3dd2951e 465-469,479-487
+flake.lock
+  s_a4a3eea4720821::t_73a3da7211e1d8 34-35,38,44
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "7cd917ed90d92b7ca6276a824d9b82d3ac19edf0",
+  "prompts": {},
+  "sessions": {
+    "s_a4a3eea4720821": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a1f4ef-68fa-7c11-b609-3f16bf1d9bf7",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
