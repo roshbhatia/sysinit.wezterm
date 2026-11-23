@@ -139,7 +139,7 @@ local function get_pane_keys()
   local DIRECTION_KEYS = { h = "Left", j = "Down", k = "Up", l = "Right" }
   local keys = {
     create_smart_keybind("s", "CTRL", host_action("Down", false)),
-    create_smart_keybind("\\", "SUPER", host_action("Right", false)),
+    create_smart_keybind("v", "CTRL", host_action("Right", false)),
     create_smart_keybind("s", "CTRL|SHIFT", host_action("Down", true)),
     create_smart_keybind("v", IS_LINUX and "SUPER|SHIFT" or "CTRL|SHIFT", host_action("Right", true)),
     -- CTRL-m is a carriage return, but nothing types it instead of Enter, and a
@@ -438,7 +438,7 @@ function M.setup(config)
   local toggle_lock = wezterm.action_callback(function()
     M.locked_mode = not M.locked_mode
   end)
-  table.insert(keys, { key = "g", mods = "SUPER|SHIFT", action = toggle_lock })
+  table.insert(keys, { key = "g", mods = "CTRL", action = toggle_lock })
   wezterm.on("augment-command-palette", function()
     return {
       {

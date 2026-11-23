@@ -126,7 +126,7 @@ Cached lists appear immediately; refreshes never replace an active selection or 
 Cold loads show a cancellable loading view. No provider discovery runs from status ticks.
 Opening a selected item still asks its provider for a current process plan.
 
-Cmd/Super+Backslash splits right, Ctrl+S splits down, and Ctrl+T opens a tab
+Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab
 on the current host. See the keyboard table for local-host variants. Locked
 mode sends these shortcuts to the focused application.
 
@@ -231,12 +231,11 @@ The Home Manager module handles installation; Lua modules handle behavior; provi
 
 ## Keyboard policy and platform audit
 
-Ctrl+S splits down, Ctrl+T opens a tab, Ctrl+M zooms, Ctrl+N rotates, and
-Ctrl+W opens close/detach. Cmd/Super+Shift+G toggles locked mode, and the
-command palette exposes **Pass shortcuts to application**. Use the same
-shortcut to unlock. Ctrl+G and Ctrl+V reach the focused application for actions
-such as prompt editing and image paste. Ctrl+Shift+R reaches Pi’s managed
-session rename. In OpenCode, Ctrl+Tab and Ctrl+Shift+Tab cycle its session tabs,
+Ctrl+S splits down, Ctrl+V splits right, Ctrl+T opens a tab, Ctrl+M zooms,
+Ctrl+N rotates, and Ctrl+W opens close/detach. Ctrl+G toggles locked mode in
+both directions. The command palette also exposes **Pass shortcuts to
+application**. With locked mode on, Ctrl+V reaches the focused application.
+Ctrl+Shift+R reaches Pi’s managed session rename. In OpenCode, Ctrl+Tab and Ctrl+Shift+Tab cycle its session tabs,
 and Ctrl+Shift+T reopens its last closed session tab. Cmd/Super+digits still
 select WezTerm tabs while OpenCode is focused.
 Copy/search modes retain their native modal controls; Escape exits them.
@@ -265,7 +264,7 @@ priority over upstream defaults.
 | Toggle tab-local float | Cmd+F | Super+F |
 | Proportional float resize | Cmd+Ctrl+J/K | Super+Ctrl+J/K |
 | Precision pane resize | Cmd+Ctrl+arrows, Ctrl+Shift+H/J/K/L | Super+Ctrl+arrows, Ctrl+Shift+H/J/K/L |
-| Split down / right on current host | Ctrl+S / Cmd+Backslash | Ctrl+S / Super+Backslash |
+| Split down / right on current host | Ctrl+S / Ctrl+V | Ctrl+S / Ctrl+V |
 | Split down / right locally | Ctrl+Shift+S / Ctrl+Shift+V; Cmd+Shift+V alias | Ctrl+Shift+S / Super+Shift+V |
 | Close or detach | Cmd+W, Ctrl+W | Super+W, Ctrl+W |
 | Close focused pane immediately | Cmd+Shift+W, Ctrl+Shift+W | Super+Shift+W, Ctrl+Shift+W |
