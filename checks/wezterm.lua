@@ -224,6 +224,9 @@ local mouse = {}
 for _, binding in ipairs(key_config.mouse_bindings) do
   local kind, detail = next(binding.event)
   local slot = kind .. ":" .. detail.streak .. ":" .. binding.mods
+  if binding.mods == "SUPER" then
+    slot = slot .. ":" .. tostring(binding.mouse_reporting)
+  end
   assert(detail.button == "Left", "a selection binding moved off the left button")
   assert(not mouse[slot], "duplicate mouse binding: " .. slot)
   mouse[slot] = binding.action
@@ -267,6 +270,9 @@ end
 -- A bare click keeps following links; SHIFT is how you select the link text.
 assert(mouse["Up:1:NONE"].CompleteSelectionOrOpenLinkAtMouseCursor, "a bare single click stopped opening links")
 assert(mouse["Up:1:SHIFT"].CompleteSelection, "shift click opens a link instead of selecting it")
+for _, reporting in ipairs({ "true", "false" }) do
+  assert(mouse["Down:1:SUPER:" .. reporting] and mouse["Up:1:SUPER:" .. reporting], "link shortcut needs both events")
+end
 
 assert(key_config.swallow_mouse_click_on_window_focus == false, "window activation discards selection")
 assert(key_config.swallow_mouse_click_on_pane_focus == false, "pane activation discards selection")
@@ -1313,6 +1319,34 @@ local event_pane = {
     return alt_screen
   end,
 }
+
+local domain = "unix"
+event_pane.get_domain_name = function()
+  return domain
+end
+event_pane.get_current_working_dir = function()
+  return { file_path = plugin_fixture }
+end
+local open_uri = assert(handlers["open-uri"])
+assert(open_uri(event_window, event_pane, "https://example.com/") == nil and not event_action)
+assert(open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == false)
+local source_args = assert(event_action.SplitPane).command.args
+assert(source_args[1] == "nvim" and source_args[2] == "+call cursor(12,4)" and source_args[3] == "--")
+assert(source_args[4] == plugin_fixture .. "/plugin/init.lua")
+event_action = nil
+domain = "ssh:example"
+assert(open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == nil and not event_action)
+domain = "unix"
+local previous_url = wezterm.url
+wezterm.url = {
+  parse = function()
+    return { file_path = plugin_fixture .. "/plugin/init.lua", host = "localhost", fragment = "L17-L19" }
+  end,
+}
+assert(open_uri(event_window, event_pane, "file:///ignored#L17-L19") == false)
+assert(event_action.SplitPane.command.args[2] == "+call cursor(17,1)")
+wezterm.url = previous_url
+event_action = nil
 
 event_window.mux_window = function()
   return {

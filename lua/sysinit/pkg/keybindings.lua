@@ -519,6 +519,21 @@ function M.setup(config)
     end
   end
 
+  for _, mouse_reporting in ipairs({ false, true }) do
+    mouse_bindings[#mouse_bindings + 1] = {
+      event = { Down = { streak = 1, button = "Left" } },
+      mods = "SUPER",
+      mouse_reporting = mouse_reporting,
+      action = act.Nop,
+    }
+    mouse_bindings[#mouse_bindings + 1] = {
+      event = { Up = { streak = 1, button = "Left" } },
+      mods = "SUPER",
+      mouse_reporting = mouse_reporting,
+      action = act.OpenLinkAtMouseCursor,
+    }
+  end
+
   config.mouse_bindings = mouse_bindings
 end
 

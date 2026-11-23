@@ -1,8 +1,75 @@
 local wezterm = require("wezterm")
+local utils = require("sysinit.pkg.utils")
 
 local M = {}
 
+local function open_file(window, pane, uri)
+  local reference = uri:match("^sysinit%-file:(.+)$")
+  if not reference and not uri:match("^file:") then
+    return
+  end
+  local domain = pane:get_domain_name()
+  if domain ~= "local" and domain ~= "unix" and domain ~= "TermWizTerminalDomain" then
+    return
+  end
+
+  local path, line, column
+  if reference then
+    path = reference
+  else
+    local ok, url = pcall(wezterm.url.parse, uri)
+    if not ok or not url or not url.file_path then
+      return
+    end
+    local host = (url.host or ""):lower()
+    if host ~= "" and host ~= "localhost" and host ~= wezterm.hostname():lower() then
+      return
+    end
+    path = url.file_path
+    line = url.fragment and url.fragment:match("^L?(%d+)") or nil
+  end
+  local name, row, col = path:match("^(.*):(%d+):(%d+)$")
+  if not name then
+    name, row = path:match("^(.*):(%d+)$")
+  end
+  path, line, column = name or path, line or row, col
+  if path:sub(1, 2) == "~/" then
+    path = utils.get_home_dir() .. path:sub(2)
+  elseif path:sub(1, 1) ~= "/" then
+    local cwd = pane:get_current_working_dir()
+    if not cwd or not cwd.file_path then
+      return false
+    end
+    path = cwd.file_path .. "/" .. path
+  end
+
+  local file = io.open(path, "rb")
+  if not file then
+    if reference then
+      window:toast_notification("WezTerm", "File not found: " .. path, nil, 3000)
+      return false
+    end
+    return
+  end
+  local _, read_error = file:read(1)
+  file:close()
+  if read_error then
+    return
+  end
+
+  local args = { utils.get_nix_binary("nvim") }
+  local row_number, column_number = math.tointeger(tonumber(line)), math.tointeger(tonumber(column))
+  if row_number and row_number > 0 then
+    args[#args + 1] = ("+call cursor(%d,%d)"):format(row_number, math.max(1, column_number or 1))
+  end
+  args[#args + 1] = "--"
+  args[#args + 1] = path
+  window:perform_action(wezterm.action.SplitPane({ direction = "Right", command = { args = args } }), pane)
+  return false
+end
+
 function M.setup(config)
+  wezterm.on("open-uri", open_file)
   local NAV_DIRECTIONS = {
     left = "Left",
     right = "Right",

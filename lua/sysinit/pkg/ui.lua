@@ -555,6 +555,16 @@ function M.setup(config)
     format = "https://github.com/$1/issues/$2",
   })
 
+  table.insert(hyperlink_rules, {
+    regex = [[(?<![\w/:~.-])((?:~?/|\.\.?/)?(?:[\w.-]+/)*[\w.-]+\.[\w-]+:[0-9]+(?::[0-9]+)?)(?![\w:/-])]],
+    format = "sysinit-file:$1",
+  })
+
+  table.insert(hyperlink_rules, {
+    regex = [[(?<![\w/:~.-])((?:~?/|\.\.?/)?(?:[\w.-]+/)+[\w.-]+\.[\w-]+)(?![\w/:.-])]],
+    format = "sysinit-file:$1",
+  })
+
   config.hyperlink_rules = hyperlink_rules
 
   config.quick_select_patterns = {
