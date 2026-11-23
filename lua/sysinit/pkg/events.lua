@@ -3,7 +3,7 @@ local utils = require("sysinit.pkg.utils")
 
 local M = {}
 
-local function open_file(window, pane, uri)
+local function open_file(window, pane, uri, unix_domains)
   local reference = uri:match("^sysinit%-file:(.+)$")
   if not reference and not uri:match("^file:") then
     return
@@ -57,19 +57,46 @@ local function open_file(window, pane, uri)
     return
   end
 
-  local args = { utils.get_nix_binary("nvim") }
-  local row_number, column_number = math.tointeger(tonumber(line)), math.tointeger(tonumber(column))
-  if row_number and row_number > 0 then
-    args[#args + 1] = ("+call cursor(%d,%d)"):format(row_number, math.max(1, column_number or 1))
+  local args = {
+    "/usr/bin/env",
+    "PATH=" .. utils.get_nix_user_bin() .. ":" .. (os.getenv("PATH") or "/usr/bin:/bin"),
+  }
+  for _, configured in ipairs(unix_domains or {}) do
+    if configured.name == domain and configured.socket_path then
+      args[#args + 1] = "WEZTERM_UNIX_SOCKET=" .. configured.socket_path
+      break
+    end
   end
-  args[#args + 1] = "--"
-  args[#args + 1] = path
-  window:perform_action(wezterm.action.SplitPane({ direction = "Right", command = { args = args } }), pane)
+  local command = {
+    utils.get_nix_binary("agent-diff"),
+    "--pane-id",
+    tostring(pane:pane_id()),
+    "--cwd",
+    path:match("^(.+)/[^/]+$") or "/",
+    "--allow-directory",
+    "--file=" .. path,
+  }
+  for _, arg in ipairs(command) do
+    args[#args + 1] = arg
+  end
+  if line then
+    args[#args + 1] = "--line=" .. line
+  end
+  if column then
+    args[#args + 1] = "--column=" .. column
+  end
+  local ok, _, err = wezterm.run_child_process(args)
+  if not ok then
+    local message = err and err ~= "" and err or "Could not open the source review."
+    window:toast_notification("Source review", message, nil, 4000)
+  end
   return false
 end
 
 function M.setup(config)
-  wezterm.on("open-uri", open_file)
+  wezterm.on("open-uri", function(window, pane, uri)
+    return open_file(window, pane, uri, config.unix_domains)
+  end)
   local NAV_DIRECTIONS = {
     left = "Left",
     right = "Right",

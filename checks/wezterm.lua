@@ -168,6 +168,9 @@ package.loaded["sysinit.pkg.utils"] = {
   get_nix_binary = function(name)
     return name
   end,
+  get_nix_user_bin = function()
+    return "/profile/bin"
+  end,
   get_process_name = function()
     return current_process
   end,
@@ -1271,7 +1274,7 @@ assert(#boundary_title <= 1024, "the Unicode boundary title exceeded its byte bo
 assert(utf8.len(boundary_title), "the window title cutoff split a UTF-8 sequence")
 assert(boundary_title:sub(-3) == "…", "the window title cutoff lost its truncation marker")
 
-local event_config = {}
+local event_config = { unix_domains = { { name = "unix", socket_path = "/tmp/test-mux.sock" } } }
 require("sysinit.pkg.events").setup(event_config)
 assert(event_config.enable_scroll_bar, "event setup did not enable the scroll bar")
 
@@ -1328,23 +1331,40 @@ event_pane.get_current_working_dir = function()
   return { file_path = plugin_fixture }
 end
 local open_uri = assert(handlers["open-uri"])
-assert(open_uri(event_window, event_pane, "https://example.com/") == nil and not event_action)
+local source_args
+local previous_child_process = child_process
+child_process = function(args)
+  source_args = args
+  return true, "", ""
+end
+assert(open_uri(event_window, event_pane, "https://example.com/") == nil and not source_args)
 assert(open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == false)
-local source_args = assert(event_action.SplitPane).command.args
-assert(source_args[1] == "nvim" and source_args[2] == "+call cursor(12,4)" and source_args[3] == "--")
-assert(source_args[4] == plugin_fixture .. "/plugin/init.lua")
-event_action = nil
+assert(source_args[3] == "WEZTERM_UNIX_SOCKET=/tmp/test-mux.sock")
+assert(source_args[4] == "agent-diff" and source_args[5] == "--pane-id" and source_args[6] == "1")
+assert(source_args[7] == "--cwd" and source_args[8] == plugin_fixture .. "/plugin")
+assert(source_args[9] == "--allow-directory")
+assert(source_args[10] == "--file=" .. plugin_fixture .. "/plugin/init.lua")
+assert(source_args[11] == "--line=12" and source_args[12] == "--column=4")
+source_args = nil
 domain = "ssh:example"
-assert(open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == nil and not event_action)
+assert(
+  open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == nil
+    and not source_args
+)
 domain = "unix"
 local previous_url = wezterm.url
 wezterm.url = {
   parse = function()
-    return { file_path = plugin_fixture .. "/plugin/init.lua", host = "localhost", fragment = "L17-L19" }
+    return {
+      file_path = plugin_fixture .. "/plugin/init.lua",
+      host = "localhost",
+      fragment = "L17-L19",
+    }
   end,
 }
 assert(open_uri(event_window, event_pane, "file:///ignored#L17-L19") == false)
-assert(event_action.SplitPane.command.args[2] == "+call cursor(17,1)")
+assert(source_args[11] == "--line=17")
+child_process = previous_child_process
 wezterm.url = previous_url
 event_action = nil
 
