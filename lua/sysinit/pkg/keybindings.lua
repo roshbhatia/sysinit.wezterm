@@ -139,7 +139,7 @@ local function get_pane_keys()
   local DIRECTION_KEYS = { h = "Left", j = "Down", k = "Up", l = "Right" }
   local keys = {
     create_smart_keybind("s", "CTRL", host_action("Down", false)),
-    create_smart_keybind("v", "CTRL", host_action("Right", false)),
+    create_smart_keybind("\\", "SUPER", host_action("Right", false)),
     create_smart_keybind("s", "CTRL|SHIFT", host_action("Down", true)),
     create_smart_keybind("v", IS_LINUX and "SUPER|SHIFT" or "CTRL|SHIFT", host_action("Right", true)),
     -- CTRL-m is a carriage return, but nothing types it instead of Enter, and a
@@ -309,34 +309,21 @@ local function get_font_keys()
 end
 
 local function get_tab_keys()
+  local opencode_tabs = { passthrough = { "opencode" }, passthrough_nvim = false }
   local keys = {
-    create_smart_keybind("Tab", "CTRL", act.ActivateTabRelative(1)),
-    create_smart_keybind("Tab", "CTRL|SHIFT", act.ActivateTabRelative(-1)),
+    create_smart_keybind("Tab", "CTRL", act.ActivateTabRelative(1), opencode_tabs),
+    create_smart_keybind("Tab", "CTRL|SHIFT", act.ActivateTabRelative(-1), opencode_tabs),
     create_smart_keybind("o", "CTRL|SHIFT", act.ActivateLastTab),
   }
 
   table.insert(keys, create_smart_keybind("t", "CTRL", host_action("tab", false)))
   table.insert(keys, create_smart_keybind("t", "SUPER", host_action("tab", false)))
-  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", not IS_LINUX)))
+  table.insert(
+    keys,
+    create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", not IS_LINUX), opencode_tabs)
+  )
   table.insert(keys, create_smart_keybind("t", "SUPER|SHIFT", host_action("tab", true)))
 
-  if not IS_LINUX then
-    table.insert(
-      keys,
-      create_smart_keybind(
-        "r",
-        "CTRL|SHIFT",
-        act.PromptInputLine({
-          description = "Rename tab:",
-          action = wezterm.action_callback(function(win, _, line)
-            if line then
-              win:active_tab():set_title(line)
-            end
-          end),
-        })
-      )
-    )
-  end
   table.insert(
     keys,
     create_smart_keybind(
@@ -434,7 +421,6 @@ function M.setup(config)
     table.insert(keys, create_smart_keybind("F11", "NONE", act.ToggleFullScreen))
     table.insert(keys, create_smart_keybind("v", "CTRL|SHIFT", act.PasteFrom("Clipboard")))
     table.insert(keys, create_smart_keybind("n", "CTRL|SHIFT", act.SpawnWindow))
-    table.insert(keys, create_smart_keybind("r", "CTRL|SHIFT", act.ReloadConfiguration))
   else
     table.insert(keys, create_smart_keybind("f", "SUPER|CTRL", act.ToggleFullScreen))
     table.insert(keys, create_smart_keybind("h", "SUPER", act.HideApplication))
@@ -449,15 +435,18 @@ function M.setup(config)
   table.insert(keys, create_smart_keybind("0", "CTRL", act.ResetFontSize))
   table.insert(keys, create_smart_keybind("0", "SUPER", act.ResetFontSize))
 
-  -- CTRL-g is readline's abort, and it stays bound: it is the switch that turns
-  -- every other binding into a passthrough, so it cannot itself pass through.
-  table.insert(keys, {
-    key = "g",
-    mods = "CTRL",
-    action = wezterm.action_callback(function()
-      M.locked_mode = not M.locked_mode
-    end),
-  })
+  local toggle_lock = wezterm.action_callback(function()
+    M.locked_mode = not M.locked_mode
+  end)
+  table.insert(keys, { key = "g", mods = "SUPER|SHIFT", action = toggle_lock })
+  wezterm.on("augment-command-palette", function()
+    return {
+      {
+        brief = M.locked_mode and "Enable terminal shortcuts" or "Pass shortcuts to application",
+        action = toggle_lock,
+      },
+    }
+  end)
 
   config.ssh_domains = require("sysinit.pkg.domains").ssh()
 

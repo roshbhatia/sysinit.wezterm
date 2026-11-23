@@ -126,9 +126,9 @@ Cached lists appear immediately; refreshes never replace an active selection or 
 Cold loads show a cancellable loading view. No provider discovery runs from status ticks.
 Opening a selected item still asks its provider for a current process plan.
 
-Ctrl+V splits right, Ctrl+S splits down, and Ctrl+T opens a tab on the current
-host. Add Shift to use the local host. These chords take priority over shell
-widgets and application bindings; locked mode passes them through.
+Cmd/Super+Backslash splits right, Ctrl+S splits down, and Ctrl+T opens a tab
+on the current host. See the keyboard table for local-host variants. Locked
+mode sends these shortcuts to the focused application.
 
 On the sysinit WezTerm fork, Cmd+F creates or toggles one floating pane owned
 by the current tab. Click outside or press Cmd+F to hide it; its process keeps
@@ -231,11 +231,14 @@ The Home Manager module handles installation; Lua modules handle behavior; provi
 
 ## Keyboard policy and platform audit
 
-Control+S/V split, Control+T opens a tab, Control+M zooms, Control+N rotates,
-and Control+W opens close/detach directly, including inside Codex. No prefix is
-required. Ctrl+G toggles locked mode, in which
-main-map shortcuts pass their original key to the application. Ctrl+G itself
-remains available to unlock. Editor and TUI passthrough rules remain in place.
+Ctrl+S splits down, Ctrl+T opens a tab, Ctrl+M zooms, Ctrl+N rotates, and
+Ctrl+W opens close/detach. Cmd/Super+Shift+G toggles locked mode, and the
+command palette exposes **Pass shortcuts to application**. Use the same
+shortcut to unlock. Ctrl+G and Ctrl+V reach the focused application for actions
+such as prompt editing and image paste. Ctrl+Shift+R reaches Pi’s managed
+session rename. In OpenCode, Ctrl+Tab and Ctrl+Shift+Tab cycle its session tabs,
+and Ctrl+Shift+T reopens its last closed session tab. Cmd/Super+digits still
+select WezTerm tabs while OpenCode is focused.
 Copy/search modes retain their native modal controls; Escape exits them.
 Direct Control+Shift+W and Command+Shift+W request close confirmation.
 Alt is reserved for the i3-style window manager; the default, copy-mode, and
@@ -250,8 +253,8 @@ priority over upstream defaults.
 | New local tab | Cmd+Shift+T, Ctrl+Shift+T | Super+Shift+T |
 | New window / local window | Cmd+N / Cmd+Shift+N | Ctrl+Shift+N / Super+Shift+N |
 | Find scrollback | Cmd+/, Ctrl+/ | Ctrl+Shift+F, Ctrl+/ |
-| Reload configuration | Cmd+R | Ctrl+Shift+R |
-| Rename tab | Cmd+Shift+R, Ctrl+Shift+R | Super+Shift+R |
+| Reload configuration | Cmd+R | Super+R |
+| Rename tab | Cmd+Shift+R | Super+Shift+R |
 | Command palette | Cmd+Shift+P, Cmd+; | Ctrl+Shift+P, Ctrl+; |
 | Copy mode | Ctrl+Shift+X, Ctrl+Escape | Ctrl+Shift+X, Ctrl+Escape |
 | Pane selector | Cmd+Ctrl+P, Ctrl+Shift+F | Super+Ctrl+P |
@@ -262,7 +265,7 @@ priority over upstream defaults.
 | Toggle tab-local float | Cmd+F | Super+F |
 | Proportional float resize | Cmd+Ctrl+J/K | Super+Ctrl+J/K |
 | Precision pane resize | Cmd+Ctrl+arrows, Ctrl+Shift+H/J/K/L | Super+Ctrl+arrows, Ctrl+Shift+H/J/K/L |
-| Split down / right on current host | Ctrl+S / Ctrl+V | Ctrl+S / Ctrl+V |
+| Split down / right on current host | Ctrl+S / Cmd+Backslash | Ctrl+S / Super+Backslash |
 | Split down / right locally | Ctrl+Shift+S / Ctrl+Shift+V; Cmd+Shift+V alias | Ctrl+Shift+S / Super+Shift+V |
 | Close or detach | Cmd+W, Ctrl+W | Super+W, Ctrl+W |
 | Close focused pane immediately | Cmd+Shift+W, Ctrl+Shift+W | Super+Shift+W, Ctrl+Shift+W |
@@ -272,8 +275,8 @@ disconnect this GUI from the pane's mux domain while keeping its sessions runnin
 Esc cancels. Ctrl+W still deletes a word inside picker filters.
 
 Ctrl+H/J/K/L pane navigation, Ctrl+M zoom, Ctrl+N rotation, Ctrl+F quick select,
-Ctrl+Tab tab cycling, Ctrl+Shift+comma/period tab movement, and Ctrl+G locked
-mode keep their existing meanings. Cmd/Super+S opens the session tree;
+Ctrl+Tab tab cycling outside OpenCode and Ctrl+Shift+comma/period tab
+movement keep their existing meanings. Cmd/Super+S opens the session tree;
 Cmd/Super+Ctrl+Shift+W opens the worker watcher; Cmd/Super+Shift+B opens the bus
 watcher; Cmd/Super+Shift+L opens theme controls. These custom shortcuts remain
 reachable without Alt.

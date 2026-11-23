@@ -384,8 +384,8 @@ end
 
 key_binding("h", "CTRL").action(window, pane)
 assert(performed[1].SendKey.key == "h", "CTRL-h did not pass through to Neovim")
-key_binding("v", "CTRL").action(window, pane)
-assert(performed[2].SplitPane.command.domain == "CurrentPaneDomain", "CTRL-v did not split from Neovim")
+key_binding("\\", "SUPER").action(window, pane)
+assert(performed[2].SplitPane.command.domain == "CurrentPaneDomain", "Command+Backslash lost the current-host split")
 key_binding("s", "CTRL|SHIFT").action(window, pane)
 assert(performed[3].SplitPane.direction == "Down", "CTRL-SHIFT-s did not create a top-level down split")
 key_binding("v", "CTRL|SHIFT").action(window, pane)
@@ -394,7 +394,7 @@ pane_vars = {}
 current_process = "slk"
 for _, chord in ipairs({
   { "s", "CTRL" },
-  { "v", "CTRL" },
+  { "\\", "SUPER" },
   { "f", "CTRL" },
   { "t", "CTRL" },
   { "u", "CTRL" },
@@ -402,7 +402,7 @@ for _, chord in ipairs({
 }) do
   local before = #performed
   key_binding(chord[1], chord[2]).action(window, pane)
-  if chord[1] == "s" or chord[1] == "v" or chord[1] == "t" then
+  if chord[1] == "s" or chord[1] == "\\" or chord[1] == "t" then
     assert(not performed[before + 1].SendKey, "host creation chord was passed through")
   else
     assert(performed[before + 1].SendKey.key == chord[1], chord[2] .. "-" .. chord[1] .. " did not reach slk")
@@ -453,7 +453,7 @@ for _, key in ipairs({ "f", "u", "d" }) do
   key_binding(key, "CTRL").action(window, pane)
   assert(performed[before + 1].SendKey.key == key, "reader chord did not reach diffnav")
 end
-for _, key in ipairs({ "s", "v", "t" }) do
+for _, key in ipairs({ "s", "t" }) do
   local before = #performed
   key_binding(key, "CTRL").action(window, pane)
   assert(not performed[before + 1].SendKey, "reader changed same-host terminal bindings")
@@ -476,21 +476,49 @@ assert(performed[before_remote + 2].ActivatePaneDirection == "Left", "stale app 
 pane_vars = {}
 for _, process in ipairs({ "codex", "claude", "nu" }) do
   current_process = process
-  for _, key in ipairs({ "s", "v", "t", "m", "n", "w" }) do
+  for _, key in ipairs({ "s", "t", "m", "n", "w" }) do
     local before = #performed
     key_binding(key, "CTRL").action(window, pane)
     assert(not performed[before + 1].SendKey, "unlocked terminal control reached " .. process .. ": " .. key)
   end
-  key_binding("g", "CTRL").action(window, pane)
-  assert(keybindings.locked_mode, "Ctrl+G did not enter locked mode")
-  for _, key in ipairs({ "s", "v", "t", "m", "n", "w" }) do
+  key_binding("g", "SUPER|SHIFT").action(window, pane)
+  assert(keybindings.locked_mode, "Command+Shift+G did not enter locked mode")
+  for _, key in ipairs({ "s", "t", "m", "n", "w" }) do
     local before = #performed
     key_binding(key, "CTRL").action(window, pane)
     assert(performed[before + 1].SendKey.key == key, "locked mode captured " .. process .. ": " .. key)
     assert(performed[before + 1].SendKey.mods == "CTRL")
   end
-  key_binding("g", "CTRL").action(window, pane)
-  assert(not keybindings.locked_mode, "Ctrl+G did not leave locked mode")
+  key_binding("g", "SUPER|SHIFT").action(window, pane)
+  assert(not keybindings.locked_mode, "Command+Shift+G did not leave locked mode")
+end
+do
+  local before = #performed
+  for _, chord in ipairs({ { "g", "CTRL" }, { "v", "CTRL" }, { "r", "CTRL|SHIFT" } }) do
+    local found = pcall(key_binding, chord[1], chord[2])
+    assert(not found, "WezTerm captured " .. chord[2] .. "+" .. chord[1])
+  end
+
+  local palette = handlers["augment-command-palette"]()
+  assert(palette[1].brief == "Pass shortcuts to application")
+  palette[1].action(window, pane)
+  assert(keybindings.locked_mode)
+  assert(handlers["augment-command-palette"]()[1].brief == "Enable terminal shortcuts")
+  key_binding("g", "SUPER|SHIFT").action(window, pane)
+  assert(not keybindings.locked_mode)
+
+  current_process = "opencode"
+  for _, chord in ipairs({ { "Tab", "CTRL" }, { "Tab", "CTRL|SHIFT" }, { "t", "CTRL|SHIFT" } }) do
+    key_binding(chord[1], chord[2]).action(window, pane)
+    local sent = performed[#performed].SendKey
+    assert(sent and sent.key == chord[1] and sent.mods == chord[2])
+  end
+  current_process = "nu"
+  key_binding("Tab", "CTRL").action(window, pane)
+  assert(performed[#performed].ActivateTabRelative == 1)
+  key_binding("Tab", "CTRL|SHIFT").action(window, pane)
+  assert(performed[#performed].ActivateTabRelative == -1)
+  assert(#performed == before + 5)
 end
 current_process = "python3"
 displayed_pane = {
@@ -1699,8 +1727,8 @@ linux_binding("n", "CTRL|SHIFT").action(linux_window, {})
 assert(linux_window.last.SpawnWindow, "Linux has no standard new-window shortcut")
 linux_binding("f", "CTRL|SHIFT").action(linux_window, {})
 assert(linux_window.last.Search, "Linux find still selects a pane")
-linux_binding("r", "CTRL|SHIFT").action(linux_window, {})
-assert(linux_window.last.ReloadConfiguration, "Linux reload still renames a tab")
+linux_binding("r", "SUPER").action(linux_window, {})
+assert(linux_window.last.ReloadConfiguration, "Linux Super+R no longer reloads configuration")
 linux_binding("1", "CTRL|SHIFT").action(linux_window, {})
 assert(linux_window.last.ActivateTab == 0, "Linux tab digits lost native convention")
 assert(linux_keys.workspace_modifiers[1] == "SUPER|CTRL|SHIFT", "Linux workspace digits collide with tabs/screenshots")
@@ -1720,7 +1748,7 @@ for _, binding in ipairs(linux_config.keys) do
     "Linux additional float shortcut remains enabled"
   )
 end
-linux_binding("g", "CTRL").action(linux_window, {})
+linux_binding("g", "SUPER|SHIFT").action(linux_window, {})
 for _, chord in ipairs({
   { "f", "SUPER" },
   { "v", "CTRL|SHIFT" },
@@ -1733,5 +1761,5 @@ for _, chord in ipairs({
     "locked mode executes a terminal action"
   )
 end
-linux_binding("g", "CTRL").action(linux_window, {})
+linux_binding("g", "SUPER|SHIFT").action(linux_window, {})
 assert(not linux_keys.locked_mode, "locked mode cannot be exited")
