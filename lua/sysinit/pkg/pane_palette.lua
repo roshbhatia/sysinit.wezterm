@@ -11,12 +11,21 @@ function M.write_scrollback(pane, path)
   file:close()
 end
 
+function M.open_scrollback(window, pane)
+  local path = os.tmpname()
+  M.write_scrollback(pane, path)
+  local editor = os.getenv("VISUAL") or os.getenv("EDITOR")
+  local ok, args = pcall(wezterm.shell_split, editor or "")
+  if not ok or #args == 0 then
+    args = { utils.get_nix_binary("nvim") }
+  end
+  args[#args + 1] = path
+  -- The capture is local even when the current pane belongs to a remote domain.
+  window:perform_action(act.SpawnCommandInNewTab({ domain = "DefaultDomain", args = args }), pane)
+end
+
 function M.entries()
   return {
-    {
-      brief = "Pane: swap with",
-      action = act.PaneSelect({ mode = "SwapWithActive" }),
-    },
     {
       brief = "Pane: break out to new tab",
       action = wezterm.action_callback(function(_, pane)
@@ -38,31 +47,14 @@ function M.entries()
       }),
     },
     {
-      brief = "Pane: open scrollback in Neovim",
-      -- The file is local, so the editor spawns in the default domain even from an SSH pane.
-      action = wezterm.action_callback(function(win, pane)
-        local path = os.tmpname()
-        M.write_scrollback(pane, path)
-        win:perform_action(
-          act.SpawnCommandInNewTab({
-            domain = "DefaultDomain",
-            args = { utils.get_nix_binary("nvim"), "+normal G", path },
-          }),
-          pane
-        )
-      end),
+      brief = "Open scrollback in editor",
+      action = wezterm.action_callback(M.open_scrollback),
     },
   }
 end
 
 function M.setup()
-  wezterm.on("augment-command-palette", function()
-    local entries = M.entries()
-    for _, entry in ipairs(require("sysinit.pkg.domains").attach_entries()) do
-      entries[#entries + 1] = entry
-    end
-    return entries
-  end)
+  wezterm.on("augment-command-palette", M.entries)
 end
 
 return M

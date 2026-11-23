@@ -242,22 +242,7 @@ local function get_system_keys()
           win:perform_action({ SendKey = { key = "e", mods = "SUPER" } }, pane)
           return
         end
-        local dims = pane:get_dimensions()
-        local lines = pane:get_lines_as_text(dims.scrollback_rows + dims.viewport_rows)
-        local tmp = os.tmpname() .. ".txt"
-        local f = io.open(tmp, "w")
-        if f then
-          f:write(lines)
-          f:close()
-        end
-        local editor = os.getenv("EDITOR") or utils.get_nix_binary("nvim")
-        local argv = { editor, tmp }
-        local ok, split = pcall(wezterm.shell_split, editor)
-        if ok and split and #split > 0 then
-          argv = split
-          table.insert(argv, tmp)
-        end
-        win:perform_action(act.SpawnCommandInNewTab({ args = argv }), pane)
+        require("sysinit.pkg.pane_palette").open_scrollback(win, pane)
       end),
     },
     create_smart_keybind("c", "SUPER", act.CopyTo("Clipboard")),
@@ -318,10 +303,7 @@ local function get_tab_keys()
 
   table.insert(keys, create_smart_keybind("t", "CTRL", host_action("tab", false)))
   table.insert(keys, create_smart_keybind("t", "SUPER", host_action("tab", false)))
-  table.insert(
-    keys,
-    create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", not IS_LINUX), opencode_tabs)
-  )
+  table.insert(keys, create_smart_keybind("t", "CTRL|SHIFT", host_action("tab", not IS_LINUX), opencode_tabs))
   table.insert(keys, create_smart_keybind("t", "SUPER|SHIFT", host_action("tab", true)))
 
   table.insert(

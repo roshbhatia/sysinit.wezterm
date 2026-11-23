@@ -115,16 +115,4 @@ function M.ssh()
 end
 
 -- Attaching inside the running GUI keeps one instance; `wezterm connect` would start another.
-function M.attach_entries()
-  local config_data = utils.load_json_file(utils.get_config_path("config.json")) or {}
-  local entries = {}
-  for _, host in ipairs(config_data.persistentRemoteHosts or {}) do
-    entries[#entries + 1] = {
-      brief = "Domain: attach ssh:" .. host:lower(),
-      action = wezterm.action.AttachDomain("ssh:" .. host:lower()),
-    }
-  end
-  return entries
-end
-
 return M

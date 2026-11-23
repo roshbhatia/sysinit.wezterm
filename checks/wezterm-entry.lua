@@ -66,7 +66,7 @@ local palette_briefs = {}
 for _, entry in ipairs(palette_handlers[1](nil, nil) or {}) do
   palette_briefs[entry.brief] = true
 end
-local expected_briefs = { "Pane: swap with" }
+local expected_briefs = { "Open scrollback in editor" }
 if package.loaded["session_tree_plugin"] then
   expected_briefs[#expected_briefs + 1] = "Session tree"
   expected_briefs[#expected_briefs + 1] = "Session: rename current"
@@ -80,10 +80,9 @@ for _, entry in ipairs(pane_palette.entries()) do
   briefs[entry.brief] = true
 end
 for _, brief in ipairs({
-  "Pane: swap with",
   "Pane: break out to new tab",
   "Tab: rename",
-  "Pane: open scrollback in Neovim",
+  "Open scrollback in editor",
 }) do
   assert(briefs[brief], brief .. " missing from the palette")
 end
