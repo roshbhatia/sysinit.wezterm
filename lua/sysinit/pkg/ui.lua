@@ -285,7 +285,8 @@ function M.setup(config)
       agent_session_states(),
       session_slots(),
       tree_colors(window),
-      tabline_ok and tabline.get_theme().tab or nil
+      tabline_ok and tabline.get_theme().tab or nil,
+      (config_data.picker or {}).hidden_workspaces
     )
   end
 

@@ -1019,11 +1019,11 @@ status_window.window_id = function()
   return 15
 end
 assert(statusbar.window_index(status_window) == " [3] ")
-local chips = statusbar.session_chips(status_window, {}, { default = 1, review = 2 }, {
+local chips = statusbar.session_chips(status_window, {}, { default = 1, review = 2, ["task-queue"] = 99 }, {
   idle = "gray",
   name = "white",
   chrome = "gray",
-})
+}, nil, { ["task-queue"] = true })
 assert(chips == "  [01] default ·    [02] review ·  ", chips)
 local original_format = wezterm.format
 local styled

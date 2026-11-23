@@ -39,10 +39,13 @@ local function chip_sessions(st, workspace)
   return "[" .. text .. "]"
 end
 
-function M.session_chips(window, sessions, slots, colors, tab_colors)
+function M.session_chips(window, sessions, slots, colors, tab_colors, hidden_workspaces)
   local ordered = {}
+  local hidden = hidden_workspaces or {}
   for name, slot in pairs(slots) do
-    ordered[#ordered + 1] = { name = name, slot = slot }
+    if not hidden[name] then
+      ordered[#ordered + 1] = { name = name, slot = slot }
+    end
   end
   if #ordered == 0 then
     return ""
