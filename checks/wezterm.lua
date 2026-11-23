@@ -1024,7 +1024,7 @@ local chips = statusbar.session_chips(status_window, {}, { default = 1, review =
   name = "white",
   chrome = "gray",
 })
-assert(chips == "  [1] default ·    [2] review ·  ", chips)
+assert(chips == "  [01] default ·    [02] review ·  ", chips)
 local original_format = wezterm.format
 local styled
 wezterm.format = function(items)
