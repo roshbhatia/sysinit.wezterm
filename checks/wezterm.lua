@@ -1352,12 +1352,11 @@ child_process = function(args)
 end
 assert(open_uri(event_window, event_pane, "https://example.com/") == nil and not source_args)
 assert(open_uri(event_window, event_pane, "sysinit-file:plugin/init.lua:12:4") == false)
-assert(source_args[3] == "WEZTERM_UNIX_SOCKET=/tmp/test-mux.sock")
-assert(source_args[4] == "agent-diff" and source_args[5] == "--pane-id" and source_args[6] == "1")
-assert(source_args[7] == "--cwd" and source_args[8] == plugin_fixture .. "/plugin")
-assert(source_args[9] == "--allow-directory")
-assert(source_args[10] == "--file=" .. plugin_fixture .. "/plugin/init.lua")
-assert(source_args[11] == "--line=12" and source_args[12] == "--column=4")
+assert(source_args[3] == "agent-diff" and source_args[4] == "--pane-id" and source_args[5] == "1")
+assert(source_args[6] == "--cwd" and source_args[7] == plugin_fixture .. "/plugin")
+assert(source_args[8] == "--allow-directory")
+assert(source_args[9] == "--file=" .. plugin_fixture .. "/plugin/init.lua")
+assert(source_args[10] == "--line=12" and source_args[11] == "--column=4")
 source_args = nil
 domain = "ssh:example"
 assert(
@@ -1376,7 +1375,7 @@ wezterm.url = {
   end,
 }
 assert(open_uri(event_window, event_pane, "file:///ignored#L17-L19") == false)
-assert(source_args[11] == "--line=17")
+assert(source_args[10] == "--line=17")
 child_process = previous_child_process
 wezterm.url = previous_url
 event_action = nil

@@ -3,7 +3,7 @@ local utils = require("sysinit.pkg.utils")
 
 local M = {}
 
-local function open_file(window, pane, uri, unix_domains)
+local function open_file(window, pane, uri)
   local reference = uri:match("^sysinit%-file:(.+)$")
   if not reference and not uri:match("^file:") then
     return
@@ -61,12 +61,6 @@ local function open_file(window, pane, uri, unix_domains)
     "/usr/bin/env",
     "PATH=" .. utils.get_nix_user_bin() .. ":" .. (os.getenv("PATH") or "/usr/bin:/bin"),
   }
-  for _, configured in ipairs(unix_domains or {}) do
-    if configured.name == domain and configured.socket_path then
-      args[#args + 1] = "WEZTERM_UNIX_SOCKET=" .. configured.socket_path
-      break
-    end
-  end
   local command = {
     utils.get_nix_binary("agent-diff"),
     "--pane-id",
@@ -88,15 +82,14 @@ local function open_file(window, pane, uri, unix_domains)
   local ok, _, err = wezterm.run_child_process(args)
   if not ok then
     local message = err and err ~= "" and err or "Could not open the source review."
+    wezterm.log_error("Source review: " .. message)
     window:toast_notification("Source review", message, nil, 4000)
   end
   return false
 end
 
 function M.setup(config)
-  wezterm.on("open-uri", function(window, pane, uri)
-    return open_file(window, pane, uri, config.unix_domains)
-  end)
+  wezterm.on("open-uri", open_file)
   local NAV_DIRECTIONS = {
     left = "Left",
     right = "Right",
