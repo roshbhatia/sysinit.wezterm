@@ -1,7 +1,7 @@
 {
   description = "WezTerm live tree and provider picker";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm/46df457104c3b678c57e6ac5a6ee4b50ef754344";
+  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm/8270ce1aabfc34fceeee9324eb60c32c623c030a";
   inputs.session-tree.inputs.nixpkgs.follows = "nixpkgs";
   inputs.spawn.url = "github:roshbhatia/spawn.wezterm";
   inputs.spawn.inputs.nixpkgs.follows = "nixpkgs";
@@ -120,7 +120,12 @@
               config = {
                 programs.sysinit-wezterm = {
                   enable = true;
-                  settings = { };
+                  settings.picker.providers = [
+                    {
+                      name = "palette-only";
+                      manifest = "/fixture/provider.json";
+                    }
+                  ];
                   environment = { };
                   persistence = {
                     enable = false;
@@ -137,6 +142,7 @@
         {
           wezspawn = self.packages.${system}.wezspawn;
           startup =
+            assert builtins.all (check: check.assertion) standalone.assertions;
             pkgs.runCommand "wezterm-standalone-startup"
               {
                 nativeBuildInputs = [ pkgs.wezterm ];

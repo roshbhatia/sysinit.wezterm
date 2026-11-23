@@ -11,6 +11,7 @@
 }:
 let
   cfg = config.programs.sysinit-wezterm;
+  pickerKeys = builtins.catAttrs "key" (cfg.settings.picker.providers or [ ]);
   stateDir = "${config.home.homeDirectory}/.local/state/wezterm/recovery";
   socketPath = "${config.home.homeDirectory}/.local/state/wezterm/mux.sock";
   # A stable path keeps the launchd plist unchanged across updates, so a switch
@@ -172,8 +173,8 @@ in
       }
       {
         assertion = builtins.all (
-          p:
-          builtins.elem p.key [
+          key:
+          builtins.elem key [
             "@"
             "#"
             "$"
@@ -187,15 +188,11 @@ in
             "="
             "?"
           ]
-        ) (cfg.settings.picker.providers or [ ]);
+        ) pickerKeys;
         message = "WezTerm provider keys must use an available punctuation shortcut";
       }
       {
-        assertion =
-          let
-            bindings = map (p: p.key) (cfg.settings.picker.providers or [ ]);
-          in
-          builtins.length bindings == builtins.length (lib.unique bindings);
+        assertion = builtins.length pickerKeys == builtins.length (lib.unique pickerKeys);
         message = "WezTerm provider keys must be unique";
       }
     ];
