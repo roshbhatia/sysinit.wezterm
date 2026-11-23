@@ -15,6 +15,15 @@ local function report(message)
   wezterm.log_warn("session recovery: " .. tostring(message))
 end
 
+local function recoverable(workspace)
+  for _, excluded in ipairs(settings.exclude_workspaces or {}) do
+    if workspace == excluded then
+      return false
+    end
+  end
+  return true
+end
+
 -- Annotates each pane before its process handle is dropped: an agent pane keeps the
 -- agent to resume, any other primary-screen pane keeps its recent scrollback.
 local function annotate_tree(node, panes)
@@ -144,8 +153,14 @@ function M.capture()
     workspaces = {},
   }
   local grouped = {}
+  if not recoverable(session.active) then
+    session.active = nil
+  end
   for _, window in ipairs(wezterm.mux.all_windows()) do
     local name = window:get_workspace()
+    if not recoverable(name) then
+      goto next_window
+    end
     local workspace = grouped[name]
     if not workspace then
       workspace = { workspace = name, window_states = {} }
@@ -192,6 +207,7 @@ function M.capture()
     if #saved_window.tabs > 0 then
       workspace.window_states[#workspace.window_states + 1] = saved_window
     end
+    ::next_window::
   end
   return session
 end
@@ -253,7 +269,7 @@ function M.save()
       names[workspace.workspace] = true
     end
     for name, workspace in pairs(deferred) do
-      if not names[name] then
+      if recoverable(name) and not names[name] then
         state.workspaces[#state.workspaces + 1] = workspace
       end
     end
@@ -264,7 +280,11 @@ function M.save()
     local previous = read_session(path)
     if previous then
       for _, workspace in ipairs(previous.workspaces) do
-        if not names[workspace.workspace] and not deferred[workspace.workspace] then
+        if
+          recoverable(workspace.workspace)
+          and not names[workspace.workspace]
+          and not deferred[workspace.workspace]
+        then
           workspace.dormant = true
           state.workspaces[#state.workspaces + 1] = workspace
         end
@@ -376,26 +396,23 @@ end
 
 -- A fresh restore spawns into domains that still hold panes; a fork needs that.
 local function restore_state(state, selected_workspace, fresh)
-  if type(selected_workspace) == "string" then
-    local selected = {}
-    for _, workspace in ipairs(state.workspaces) do
-      if workspace.workspace == selected_workspace then
-        selected[#selected + 1] = workspace
-      end
+  local explicit = type(selected_workspace) == "string"
+  local selected = {}
+  for _, workspace in ipairs(state.workspaces) do
+    local requested = selected_workspace == workspace.workspace or (not explicit and not workspace.dormant)
+    if requested and recoverable(workspace.workspace) then
+      selected[#selected + 1] = workspace
     end
-    state.workspaces = selected
+  end
+  state.workspaces = selected
+  if explicit then
     state.active = selected_workspace
-  else
-    local active = {}
-    for _, workspace in ipairs(state.workspaces) do
-      if not workspace.dormant then
-        active[#active + 1] = workspace
-      end
-    end
-    state.workspaces = active
+  end
+  if not recoverable(state.active) then
+    state.active = nil
   end
   busy = true
-  if type(selected_workspace) ~= "string" then
+  if not explicit then
     deferred = {}
   end
   local unavailable, retained = {}, {}

@@ -251,20 +251,35 @@ local recovery_opts = {
   socket_path = "/fixture/socket",
   mux_binary = "/fixture/mux",
   mux_config = "/fixture/config",
+  exclude_workspaces = { "task-queue" },
 }
 local live_windows = windows
 windows = {}
 recovery.setup_mux(recovery_opts)
 windows = live_windows
+windows[#windows + 1] = make_window("task-queue", "local", "/fixture")
+active = "task-queue"
+local captured = recovery.capture()
+assert(#captured.workspaces == 2 and captured.active == nil, "excluded workspace was captured")
+table.remove(windows)
+active = "beta"
 assert(not recovery.save(), "the mux saved before mux-startup restored its snapshot")
 events["mux-startup"]()
 assert(recovery.save(), table.concat(operations, "\n"))
 local file = assert(io.open(state_dir .. "/session.json"))
-local snapshot = native.json_parse(file:read("*a"))
+local snapshot_json = file:read("*a")
+local snapshot = native.json_parse(snapshot_json)
 file:close()
 assert(#snapshot.workspaces == 2, "inactive workspace was not saved")
 assert(snapshot.workspaces[1].window_states[1].tabs[1].floating.width == 35, "hidden float was not saved")
 assert(snapshot.workspaces[1].window_states[1].tabs[1].pane_tree.text == nil, "terminal output was saved")
+snapshot.workspaces[#snapshot.workspaces + 1] = {
+  workspace = "task-queue",
+  window_states = native.json_parse(snapshot_json).workspaces[2].window_states,
+}
+file = assert(io.open(state_dir .. "/session.json", "w"))
+file:write(native.json_encode(snapshot))
+file:close()
 windows, attached = {}, false
 connection_window = make_window("alpha", "TermWizTerminalDomain", "/")
 assert(recovery.restore())
