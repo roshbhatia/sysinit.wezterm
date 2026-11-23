@@ -1,7 +1,7 @@
 {
   description = "WezTerm live tree and provider picker";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm/8270ce1aabfc34fceeee9324eb60c32c623c030a";
+  inputs.session-tree.url = "github:roshbhatia/session-tree.wezterm/b9ce1b90c81c74fd5b7a96719d8cec8cee19a416";
   inputs.session-tree.inputs.nixpkgs.follows = "nixpkgs";
   inputs.spawn.url = "github:roshbhatia/spawn.wezterm";
   inputs.spawn.inputs.nixpkgs.follows = "nixpkgs";

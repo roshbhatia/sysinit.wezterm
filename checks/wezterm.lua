@@ -1033,7 +1033,20 @@ local chips = statusbar.session_chips(status_window, {}, { default = 1, review =
   name = "white",
   chrome = "gray",
 }, nil, { ["task-queue"] = true })
-assert(chips == "  [01] default ·    [02] review ·  ", chips)
+assert(chips == "  [1] default ·    [2] review ·  ", chips)
+do
+  local threshold_slots = { ["task-queue"] = 99 }
+  local chip_colors = { idle = "gray", name = "white", chrome = "gray" }
+  for count = 1, 11 do
+    threshold_slots["session-" .. count] = count
+    if count >= 10 then
+      local numbered = statusbar.session_chips(status_window, {}, threshold_slots, chip_colors, nil, {
+        ["task-queue"] = true,
+      })
+      assert(numbered:find(count == 10 and "[1] session-1" or "[01] session-1", 1, true), numbered)
+    end
+  end
+end
 local original_format = wezterm.format
 local styled
 wezterm.format = function(items)

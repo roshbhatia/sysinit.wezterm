@@ -59,6 +59,7 @@ function M.session_chips(window, sessions, slots, colors, tab_colors, hidden_wor
     active = window:active_workspace()
   end)
 
+  local ordinal = #ordered > 10 and "  [%02d] %s" or "  [%d] %s"
   local items = {}
   for _, entry in ipairs(ordered) do
     local st = sessions[entry.name]
@@ -76,7 +77,7 @@ function M.session_chips(window, sessions, slots, colors, tab_colors, hidden_wor
       items[#items + 1] = { Background = { Color = palette.bg } }
     end
     items[#items + 1] = { Foreground = { Color = fg } }
-    items[#items + 1] = { Text = string.format("  [%02d] %s", entry.slot, label) }
+    items[#items + 1] = { Text = ordinal:format(entry.slot, label) }
     local inside = chip_sessions(st, entry.name)
     if inside ~= "" then
       items[#items + 1] = { Attribute = { Intensity = "Normal" } }
