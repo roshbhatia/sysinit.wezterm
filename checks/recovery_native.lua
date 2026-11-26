@@ -434,6 +434,47 @@ end
 assert(replayed, "the restored shell did not replay its scrollback")
 assert(resumed, "the saved conversation was not launched")
 
+local allowed_argv = { "/bin/echo", "argument with spaces", "$(literal)" }
+recovery_opts.program_resume = { { argv = allowed_argv, cwd = "/fixture" } }
+windows = { make_window("protocol", "local", "/other") }
+local protocol_pane = windows[1].selected.selected
+local denied_pane = protocol_pane:split({ cwd = "/other" })
+function protocol_pane:get_program_resume()
+  return { argv = allowed_argv, cwd = "/fixture" }
+end
+function denied_pane:get_program_resume()
+  return { argv = allowed_argv, cwd = "/another-directory" }
+end
+package.loaded["sysinit.pkg.ui.panes"].facts = function()
+  return {}
+end
+assert(recovery.save(), table.concat(operations, "\n"))
+local history_file = assert(io.open(recovery.history()[1].path))
+assert(not history_file:read("*a"):find("argument with spaces", 1, true), "history saved a resume command")
+history_file:close()
+windows, attached = {}, false
+assert(recovery.restore("protocol"), table.concat(operations, "\n"))
+local restore_count = 0
+for _, position in ipairs(windows[1].selected.positions) do
+  local pane = position.pane
+  if pane.spawn_args then
+    restore_count = restore_count + 1
+    assert(pane.cwd == "/fixture", "the reported directory was dropped")
+    assert(#pane.spawn_args == #allowed_argv, "the resume arguments were rewritten")
+    for index, arg in ipairs(allowed_argv) do
+      assert(pane.spawn_args[index] == arg, "a resume argument was changed")
+    end
+  end
+end
+assert(restore_count == 1, "a mismatched rule was restored or the allowed report was lost")
+windows = {}
+assert(recovery.save(), table.concat(operations, "\n"))
+assert(
+  not native.json_encode(read_snapshot()):find("program_resume", 1, true),
+  "an exited program remained eligible for resume"
+)
+recovery_opts.program_resume = nil
+
 windows = { make_window("single", "local", "/fixture") }
 package.loaded["sysinit.pkg.ui.panes"].facts = function()
   return { agent = "claude", thread_id = "root-thread" }

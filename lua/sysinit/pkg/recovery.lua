@@ -15,6 +15,19 @@ local function report(message)
   wezterm.log_warn("session recovery: " .. tostring(message))
 end
 
+local function prepare_state_directory()
+  assert(
+    wezterm.run_child_process({ "mkdir", "-p", settings.state_dir }),
+    "cannot create the session recovery directory"
+  )
+  if #(settings.program_resume or {}) > 0 then
+    assert(
+      wezterm.run_child_process({ "chmod", "700", settings.state_dir }),
+      "cannot protect the session recovery directory"
+    )
+  end
+end
+
 local function recoverable(workspace)
   for _, excluded in ipairs(settings.exclude_workspaces or {}) do
     if workspace == excluded then
@@ -24,12 +37,49 @@ local function recoverable(workspace)
   return true
 end
 
+local function allowed_program(record)
+  if type(record) ~= "table" or type(record.argv) ~= "table" or type(record.cwd) ~= "string" then
+    return false
+  end
+  if type(record.argv[1]) ~= "string" or not record.argv[1]:match("^/") or not record.cwd:match("^/") then
+    return false
+  end
+  for _, rule in ipairs(settings.program_resume or {}) do
+    if
+      type(rule) == "table"
+      and type(rule.argv) == "table"
+      and record.cwd == rule.cwd
+      and #record.argv == #rule.argv
+    then
+      local equal = true
+      for index, arg in ipairs(record.argv) do
+        if arg ~= rule.argv[index] then
+          equal = false
+          break
+        end
+      end
+      if equal then
+        return true
+      end
+    end
+  end
+  return false
+end
+
 -- Annotates each pane before its process handle is dropped: an agent pane keeps the
 -- agent to resume, any other primary-screen pane keeps its recent scrollback.
 local function annotate_tree(node, panes)
   local pane = panes[tostring(node.left) .. ":" .. tostring(node.top)]
   if pane then
     local cwd = node.cwd
+    if #(settings.program_resume or {}) > 0 then
+      local accepted, record = pcall(function()
+        return pane:get_program_resume()
+      end)
+      if accepted and allowed_program(record) then
+        node.program_resume = record
+      end
+    end
     local ok, facts = pcall(function()
       return require("sysinit.pkg.ui.panes").facts(pane:pane_id(), cwd)
     end)
@@ -40,7 +90,7 @@ local function annotate_tree(node, panes)
     if agent and (settings.agent_resume or {})[agent] then
       node.resume = agent
       node.thread_id = facts.thread_id
-    elseif (settings.scrollback_lines or 0) > 0 then
+    elseif not node.program_resume and (settings.scrollback_lines or 0) > 0 then
       local alt_ok, alt = pcall(function()
         return pane:is_alt_screen_active()
       end)
@@ -61,14 +111,30 @@ local function annotate_tree(node, panes)
   end
 end
 
-local function strip_scrollback(node)
+local function strip_private_state(node)
   node.scrollback = nil
+  node.program_resume = nil
   if node.right then
-    strip_scrollback(node.right)
+    strip_private_state(node.right)
   end
   if node.bottom then
-    strip_scrollback(node.bottom)
+    strip_private_state(node.bottom)
   end
+end
+
+local function clear_workspace_program_resume(workspace)
+  local changed = false
+  for _, window in ipairs(workspace.window_states) do
+    for _, tab in ipairs(window.tabs) do
+      pane_tree.fold(tab.pane_tree, nil, function(_, node)
+        if node.program_resume then
+          node.program_resume = nil
+          changed = true
+        end
+      end)
+    end
+  end
+  return changed
 end
 
 -- The mux injects saved text into its own panes; a GUI-side restore holds mux-client
@@ -273,11 +339,21 @@ function M.save()
         state.workspaces[#state.workspaces + 1] = workspace
       end
     end
-    if #state.workspaces == 0 then
-      return
-    end
     local path = settings.state_dir .. "/session.json"
     local previous = read_session(path)
+    if #state.workspaces == 0 then
+      local changed = false
+      for _, workspace in ipairs(previous and previous.workspaces or {}) do
+        if clear_workspace_program_resume(workspace) then
+          changed = true
+        end
+      end
+      if changed then
+        write_snapshot(path .. ".bak", previous)
+        write_snapshot(path, previous)
+      end
+      return
+    end
     if previous then
       for _, workspace in ipairs(previous.workspaces) do
         if
@@ -286,6 +362,7 @@ function M.save()
           and not deferred[workspace.workspace]
         then
           workspace.dormant = true
+          clear_workspace_program_resume(workspace)
           state.workspaces[#state.workspaces + 1] = workspace
         end
       end
@@ -296,7 +373,7 @@ function M.save()
     for _, workspace in ipairs(light.workspaces) do
       for _, saved_window in ipairs(workspace.window_states) do
         for _, saved_tab in ipairs(saved_window.tabs) do
-          strip_scrollback(saved_tab.pane_tree)
+          strip_private_state(saved_tab.pane_tree)
         end
       end
     end
@@ -365,6 +442,14 @@ local function prepare_tree(node, unavailable)
   node.domain = domain_name(node.domain)
   if unavailable[node.domain] then
     return false
+  end
+  if local_domain(node.domain) and allowed_program(node.program_resume) then
+    local ok, exists = pcall(wezterm.read_dir, node.program_resume.cwd)
+    if ok and exists then
+      node.args = node.program_resume.argv
+      node.cwd = node.program_resume.cwd
+      node.scrollback = nil
+    end
   end
   if local_domain(node.domain) and node.cwd and node.cwd ~= "" then
     local ok, exists = pcall(wezterm.read_dir, node.cwd)
@@ -598,7 +683,7 @@ function M.fork(source, target)
   for _, window in ipairs(selected.window_states) do
     for _, tab in ipairs(window.tabs) do
       pane_tree.fold(tab.pane_tree, nil, function(_, node)
-        node.resume, node.thread_id = nil, nil
+        node.resume, node.thread_id, node.program_resume = nil, nil, nil
       end)
     end
   end
@@ -631,7 +716,7 @@ end
 function M.setup_mux(opts)
   settings = opts
   settings.mode = "mux"
-  wezterm.run_child_process({ "mkdir", "-p", settings.state_dir })
+  prepare_state_directory()
   wezterm.GLOBAL.recovery_generation = (wezterm.GLOBAL.recovery_generation or 0) + 1
   local generation = wezterm.GLOBAL.recovery_generation
   local request = settings.state_dir .. "/save-request"
@@ -675,8 +760,10 @@ end
 
 function M.setup(config, opts)
   settings = opts
-  local made = wezterm.run_child_process({ "mkdir", "-p", settings.state_dir })
-  assert(made, "cannot create the session recovery directory")
+  if #(settings.program_resume or {}) > 0 then
+    config.enable_program_resume = true
+  end
+  prepare_state_directory()
   config.unix_domains = {
     {
       name = "unix",

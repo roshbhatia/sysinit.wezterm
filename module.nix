@@ -43,6 +43,11 @@ let
         builtins.toJSON (builtins.toJSON (cfg.settings.unsetEnvironmentVariables or [ ]))
       }),
       mux_server_spawn_initial_tab = false,
+      enable_program_resume = type(data.persistence) == "table"
+        and data.persistence.enable
+        and type(data.persistence.program_resume) == "table"
+        and #data.persistence.program_resume > 0
+        or nil,
       colors = data.colors,
       color_scheme = data.color_scheme,
     }

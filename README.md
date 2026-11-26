@@ -50,6 +50,26 @@ The command palette provides `Session: save recovery snapshot`, `Session: restor
 last session`, and `Session: restore saved workspace`. The live session tree and
 the seshy and zmx providers retain their existing ownership.
 
+The WezTerm fork can accept [OSC 7577 Program Resume reports](https://www.superlogical.com/rex/docs/build/program-resume).
+To restore a reporting program, add its exact argv and working directory to
+`programs.sysinit-wezterm.settings.persistence.program_resume`:
+
+```nix
+programs.sysinit-wezterm.settings.persistence.program_resume = [
+  {
+    argv = [ "/run/current-system/sw/bin/nvim" "-S" "/home/me/.local/state/nvim/project.vim" ];
+    cwd = "/home/me/projects/project";
+  }
+];
+```
+
+Rules enable reporting for newly created local panes. Recovery checks the rule
+again when restoring, requires the directory to exist, and starts the absolute
+executable with its arguments directly. Keep state files under your own
+private state directory. The main snapshot and its backup can store the report.
+Snapshot history and workspace forks omit it.
+Keep the token out of restricted child processes and remote environments.
+
 Set `programs.sysinit-wezterm.persistence.service = true` on managed remote hosts
 to run the mux as a systemd user service or macOS LaunchAgent. Linux hosts also
 need user lingering. Point the corresponding SSH domains' `remote_wezterm_path`
