@@ -1,0 +1,25 @@
+README.md
+  s_8db7fc35d14233::t_f73ab975be1a02 53-72
+checks/recovery_native.lua
+  s_8db7fc35d14233::t_ceca4623b4ccc1 437-477
+lua/sysinit/pkg/recovery.lua
+  s_8db7fc35d14233::t_0848fc6f121092 18-30,40-68,75-82,93,114,116,118,121,125-139,342-343,345-354,365,376,446-453,686,719,763-766
+module.nix
+  s_8db7fc35d14233::t_1c56ee52de0260 46-50
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "cc7f32e2209080697471c2442aaddbec55e04c65",
+  "prompts": {},
+  "sessions": {
+    "s_8db7fc35d14233": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a215ce-24da-7591-890e-c407374c6ce4",
+        "model": "gpt-6.2-sol"
+      },
+      "human_author": "Roshan Bhatia <rshnbhatia@gmail.com>"
+    }
+  }
+}
