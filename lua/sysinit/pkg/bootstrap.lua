@@ -30,7 +30,7 @@ end
 
 -- WezTerm runs only the first handler of a synchronous event, so every module's
 -- augment-command-palette handler is collected and served by one that concatenates them.
-local function collect_palette_handlers()
+local function collect_palette_handlers(extra_entries)
   local on = wezterm.on
   local handlers = {}
   wezterm.on = function(name, callback)
@@ -54,13 +54,16 @@ local function collect_palette_handlers()
           end
         end
       end
+      for _, entry in ipairs(extra_entries) do
+        entries[#entries + 1] = entry
+      end
       return entries
     end)
   end
 end
 
-function M.build()
-  local finish_palette = collect_palette_handlers()
+function M.build(options)
+  local finish_palette = collect_palette_handlers(options and options.palette_entries or {})
   local config = {}
   if wezterm.config_builder then
     config = wezterm.config_builder()

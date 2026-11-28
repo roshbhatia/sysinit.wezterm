@@ -19,7 +19,8 @@ wezterm.on = function(name, callback)
   return on(name, callback)
 end
 
-local config = require("sysinit.pkg.bootstrap").build()
+local extra_entry = { brief = "Extra palette entry", action = wezterm.action.Nop }
+local config = require("sysinit.pkg.bootstrap").build({ palette_entries = { extra_entry } })
 wezterm.on = on
 assert(#title_handlers == 1, "tab title has competing renderers")
 for _, active in ipairs({ true, false }) do
@@ -63,7 +64,9 @@ assert(
   "the command palette has " .. #palette_handlers .. " handlers; WezTerm shows only the first"
 )
 local palette_briefs = {}
-for _, entry in ipairs(palette_handlers[1](nil, nil) or {}) do
+local palette = palette_handlers[1](nil, nil)
+assert(palette[#palette] == extra_entry, "consumer entry was not appended to the palette")
+for _, entry in ipairs(palette) do
   palette_briefs[entry.brief] = true
 end
 local expected_briefs = { "Open scrollback in editor" }
